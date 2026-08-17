@@ -1,6 +1,12 @@
+"use client";
+// The landing: a living Three.js hero (chrome mercury field, orbit parallax,
+// pointer dust, scan-line intro) with glass UI over it.
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+
+const HeroScene = dynamic(() => import("@/components/HeroScene"), { ssr: false });
 
 const FEATURES = [
   {
@@ -47,67 +53,52 @@ export default function Home() {
     <>
       <Nav />
       <main>
-        {/* Hero */}
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-16 md:grid-cols-2 md:pt-24">
-          <div>
-            <p className="mb-4 inline-block rounded-full border border-stroke bg-surface px-3 py-1 text-xs font-semibold tracking-wide text-accent">
-              BETA — FREE WHILE WE BUILD
-            </p>
-            <h1 className="text-4xl font-bold leading-tight md:text-5xl">
-              <span className="mercury-text">AI creatives,</span>
-              <br />
-              published to TikTok.
-            </h1>
-            <p className="mt-5 max-w-md text-lg leading-relaxed text-muted">
-              Opaque Studio turns your product photos into scroll-stopping
-              before/after videos, scores them with music, and publishes them
-              straight to your TikTok account. Built to grow our own app —
-              now open to every marketer.
-            </p>
-            <div className="mt-8 flex gap-4">
-              <Link
-                href="/signup"
-                className="rounded-full bg-accent px-6 py-3 font-semibold text-ink transition hover:bg-deep hover:text-fg"
-              >
-                Start free
-              </Link>
-              <Link
-                href="/#how"
-                className="rounded-full border border-stroke px-6 py-3 font-semibold text-fg transition hover:border-accent"
-              >
-                How it works
-              </Link>
+        {/* Hero — the living scene */}
+        <section className="relative -mt-14 flex min-h-[100svh] items-center overflow-hidden">
+          <HeroScene />
+          {/* Readability scrim behind the copy + bottom fade into the page */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-3/5 bg-gradient-to-r from-ink/95 via-ink/55 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-ink" />
+          <div className="relative z-10 mx-auto w-full max-w-6xl px-5 pt-14">
+            <div className="max-w-xl">
+              <p className="glass mb-5 inline-block rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest text-accent">
+                BETA — FREE WHILE WE BUILD
+              </p>
+              <h1 className="text-5xl font-bold leading-[1.05] md:text-7xl">
+                <span className="mercury-text">AI creatives,</span>
+                <br />
+                published to TikTok.
+              </h1>
+              <p className="mt-6 max-w-md text-lg leading-relaxed text-muted">
+                Opaque Studio turns your product photos into scroll-stopping
+                before/after videos, scores them with music, and publishes them
+                straight to your TikTok account.
+              </p>
+              <div className="mt-9 flex flex-wrap gap-4">
+                <Link
+                  href="/signup"
+                  className="glass-bright rounded-full px-7 py-3.5 font-semibold text-fg transition"
+                >
+                  Start free
+                </Link>
+                <Link
+                  href="/#features"
+                  className="glass rounded-full px-7 py-3.5 font-semibold text-fg transition hover:border-accent/50"
+                >
+                  Explore the studio
+                </Link>
+              </div>
             </div>
           </div>
-
-          {/* CSS phone demo: an endless before→after wipe */}
-          <div className="flex justify-center">
-            <div className="relative aspect-[9/16] w-64 overflow-hidden rounded-[2rem] border border-stroke bg-surface shadow-2xl shadow-deep/20">
-              <div className="absolute inset-0 bg-gradient-to-b from-[#3a3f4d] to-[#22262f]" />
-              <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-30">
-                🌇
-              </div>
-              <div className="wipe-layer absolute inset-y-0 left-0 overflow-hidden">
-                <div className="absolute inset-y-0 left-0 w-64 bg-gradient-to-b from-deep to-ink" />
-                <div className="absolute inset-y-0 left-0 flex w-64 items-center justify-center text-6xl">
-                  🌆
-                </div>
-                <div className="absolute inset-y-0 right-0 w-0.5 bg-accent shadow-[0_0_12px_2px_rgba(163,194,240,0.8)]" />
-              </div>
-              <div className="chip-in absolute bottom-16 left-1/2 -translate-x-1/2 rounded-full bg-ink/80 px-3 py-1 text-xs font-semibold text-accent">
-                Golden Hour
-              </div>
-              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-[10px] tracking-wide text-muted">
-                rendered by Opaque Studio
-              </div>
-            </div>
+          <div className="scroll-hint absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-muted">
+            ↓
           </div>
         </section>
 
         {/* Features */}
-        <section id="features" className="border-t border-stroke/60 bg-surface/40">
-          <div className="mx-auto max-w-6xl px-5 py-20">
-            <h2 className="text-3xl font-bold">
+        <section id="features" className="relative">
+          <div className="mx-auto max-w-6xl px-5 py-24">
+            <h2 className="text-3xl font-bold md:text-4xl">
               The whole pipeline, <span className="mercury-text">one studio</span>
             </h2>
             <p className="mt-3 max-w-xl text-muted">
@@ -119,7 +110,7 @@ export default function Home() {
               {FEATURES.map((f) => (
                 <div
                   key={f.title}
-                  className="rounded-2xl border border-stroke bg-ink p-6 transition hover:border-accent/50"
+                  className="glass scan-card rounded-2xl p-6 transition hover:border-accent/50 hover:shadow-lg hover:shadow-deep/20"
                 >
                   <div className="mercury-text text-2xl">{f.icon}</div>
                   <h3 className="mt-3 font-semibold">{f.title}</h3>
@@ -131,7 +122,7 @@ export default function Home() {
         </section>
 
         {/* How it works */}
-        <section id="how" className="mx-auto max-w-6xl px-5 py-20">
+        <section id="how" className="mx-auto max-w-6xl px-5 py-16">
           <h2 className="text-3xl font-bold">How it works</h2>
           <div className="mt-10 grid gap-8 md:grid-cols-4">
             {STEPS.map(([title, body], i) => (
@@ -142,7 +133,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <div className="mt-12 rounded-2xl border border-stroke bg-surface p-6 text-sm leading-relaxed text-muted">
+          <div className="glass mt-12 rounded-2xl p-6 text-sm leading-relaxed text-muted">
             <strong className="text-fg">Your account, your rules.</strong> Opaque
             Studio publishes only what you approve, to the TikTok account you
             connect, with the privacy level you choose on each post. Disconnect
@@ -152,9 +143,10 @@ export default function Home() {
         </section>
 
         {/* CTA */}
-        <section className="border-t border-stroke/60 bg-surface/40">
-          <div className="mx-auto max-w-6xl px-5 py-16 text-center">
-            <h2 className="text-3xl font-bold">
+        <section className="relative overflow-hidden border-t border-stroke/60">
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-deep/20 blur-3xl" />
+          <div className="relative mx-auto max-w-6xl px-5 py-20 text-center">
+            <h2 className="text-3xl font-bold md:text-4xl">
               Your next hundred creatives are{" "}
               <span className="mercury-text">one batch away</span>
             </h2>
@@ -164,7 +156,7 @@ export default function Home() {
             </p>
             <Link
               href="/signup"
-              className="mt-8 inline-block rounded-full bg-accent px-8 py-3 font-semibold text-ink transition hover:bg-deep hover:text-fg"
+              className="glass-bright mt-9 inline-block rounded-full px-9 py-3.5 font-semibold text-fg transition"
             >
               Create your account
             </Link>

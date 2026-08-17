@@ -27,6 +27,72 @@ body {
   background: linear-gradient(135deg, #f5f5f5, #a3c2f0, #547dcc);
 }
 
+/* Glass surfaces — the shader-button look: translucent, blurred, hairline. */
+.glass {
+  background: color-mix(in srgb, #161a22 55%, transparent);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid rgba(163, 194, 240, 0.16);
+}
+.glass-bright {
+  background: linear-gradient(
+    135deg,
+    rgba(163, 194, 240, 0.22),
+    rgba(84, 125, 204, 0.12)
+  );
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(163, 194, 240, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 32px rgba(84, 125, 204, 0.25);
+}
+.glass-bright:hover {
+  border-color: rgba(163, 194, 240, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 8px 40px rgba(163, 194, 240, 0.4);
+}
+
+/* Card scan-in: a light sweep as content enters (MengTo's loading-scan nod). */
+@keyframes cardscan {
+  from { transform: translateY(101%); }
+  to { transform: translateY(-101%); }
+}
+.scan-card {
+  position: relative;
+  overflow: hidden;
+}
+.scan-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    transparent,
+    rgba(163, 194, 240, 0.18) 48%,
+    rgba(163, 194, 240, 0.5) 50%,
+    rgba(163, 194, 240, 0.18) 52%,
+    transparent
+  );
+  animation: cardscan 1.1s ease-out 0.15s both;
+  pointer-events: none;
+}
+
+/* Scroll hint at the bottom of the hero. */
+@keyframes drift-down {
+  0%, 100% { transform: translateY(0); opacity: 0.7; }
+  50% { transform: translateY(6px); opacity: 0.25; }
+}
+.scroll-hint {
+  animation: drift-down 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-card::after, .scroll-hint { animation: none; }
+  .scan-card::after { display: none; }
+}
+
 /* The landing hero's phone demo: an endless before→after wipe. */
 @keyframes wipe {
   0%, 18% { width: 0%; }

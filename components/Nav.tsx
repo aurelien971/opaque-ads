@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 export default function Nav() {
   const { user } = useAuth();
   return (
-    <header className="sticky top-0 z-40 border-b border-stroke/60 bg-ink/80 backdrop-blur">
+    <header className="glass sticky top-0 z-40 border-x-0 border-t-0 border-b border-stroke/60">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2">
           <span className="mercury-bg inline-block h-5 w-5 rounded-full border-2 border-ink ring-2 ring-accent/40" />
@@ -21,7 +21,7 @@ export default function Nav() {
           {user ? (
             <Link
               href="/dashboard"
-              className="rounded-full bg-accent px-4 py-1.5 font-semibold text-ink hover:bg-deep hover:text-fg"
+              className="glass-bright rounded-full px-4 py-1.5 font-semibold text-fg transition"
             >
               Dashboard
             </Link>
@@ -32,7 +32,7 @@ export default function Nav() {
               </Link>
               <Link
                 href="/signup"
-                className="rounded-full bg-accent px-4 py-1.5 font-semibold text-ink hover:bg-deep hover:text-fg"
+                className="glass-bright rounded-full px-4 py-1.5 font-semibold text-fg transition"
               >
                 Get started
               </Link>
