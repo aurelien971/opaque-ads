@@ -1,8 +1,12 @@
 "use client";
 // The living hero: a Three.js field of chrome mercury droplets orbiting a
-// spinning chrome "O", lit in the brand blues. Mouse orbit parallax, particles
-// drawn to the pointer, and a wireframe scan-line intro that materializes the
-// scene bottom-to-top. Renders behind the hero copy; pointer-events stay off.
+// spinning chrome "O", lit in the brand blues. Fully interactive:
+//   · mouse orbit parallax
+//   · drag horizontally to spin the O (with inertia)
+//   · sweep the cursor through droplets — they scatter and spring home
+//   · click a droplet to flick it
+//   · scrolling adds rotation
+// Plus the wireframe scan-line intro that materializes the scene bottom-up.
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -37,7 +41,6 @@ export default function HeroScene() {
     );
     camera.position.set(0, 0.4, 7);
 
-    // Lights: dim ambient plus the two brand hues.
     scene.add(new THREE.AmbientLight(0x223, 2));
     const keyLight = new THREE.PointLight(0xa3c2f0, 60, 40);
     keyLight.position.set(4, 5, 4);
@@ -46,7 +49,6 @@ export default function HeroScene() {
     rimLight.position.set(-5, -3, 2);
     scene.add(rimLight);
 
-    // Chrome material used everywhere (wireframe twin for the intro scan).
     const chrome = new THREE.MeshStandardMaterial({
       color: 0xdfe6f2,
       metalness: 1,
@@ -68,10 +70,12 @@ export default function HeroScene() {
     torus.position.x = X_OFF;
     scene.add(torus);
 
-    // Mercury droplets drifting around it.
+    // Mercury droplets: bobbing homes + spring physics so they scatter on
+    // touch and glide back.
     type Drop = {
       mesh: THREE.Mesh;
       base: THREE.Vector3;
+      vel: THREE.Vector3;
       speed: number;
       phase: number;
       amp: number;
@@ -94,6 +98,7 @@ export default function HeroScene() {
       drops.push({
         mesh,
         base: mesh.position.clone(),
+        vel: new THREE.Vector3(),
         speed: 0.2 + Math.random() * 0.5,
         phase: Math.random() * Math.PI * 2,
         amp: 0.15 + Math.random() * 0.35,
@@ -101,7 +106,7 @@ export default function HeroScene() {
       scene.add(mesh);
     }
 
-    // Pointer particles: a drifting dust field, gently pulled toward the cursor.
+    // Pointer dust: gentler pull than before so it trails, never clumps.
     const COUNT = 500;
     const positions = new Float32Array(COUNT * 3);
     const velocities = new Float32Array(COUNT * 3);
@@ -125,8 +130,7 @@ export default function HeroScene() {
     );
     scene.add(dust);
 
-    // The intro scan line: a thin glowing plane sweeping bottom → top;
-    // everything below it materializes from wireframe to chrome.
+    // Intro scan line.
     const scan = new THREE.Mesh(
       new THREE.PlaneGeometry(18, 0.035),
       new THREE.MeshBasicMaterial({
@@ -140,13 +144,44 @@ export default function HeroScene() {
     scan.position.z = 0.5;
     scene.add(scan);
 
+    // ---- Interaction state ----
     const pointer = new THREE.Vector2(0, 0);
-    const pointerWorld = new THREE.Vector3(0, 0, 0);
+    const raycaster = new THREE.Raycaster();
+    const closest = new THREE.Vector3();
+    let spinAcc = 0; // accumulated drag spin on the O
+    let spinVel = 0;
+    let dragging = false;
+    let lastX = 0;
+
     const onMove = (e: PointerEvent) => {
       pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
       pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      if (dragging) {
+        spinVel += (e.clientX - lastX) * 0.00022;
+        lastX = e.clientX;
+      }
+    };
+    const onDown = (e: PointerEvent) => {
+      dragging = true;
+      lastX = e.clientX;
+      host.style.cursor = "grabbing";
+      // Click a droplet → flick it along the view ray.
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObjects(drops.map((d) => d.mesh))[0];
+      if (hit) {
+        const drop = drops.find((d) => d.mesh === hit.object);
+        drop?.vel.addScaledVector(raycaster.ray.direction, 0.5);
+      }
+    };
+    const onUp = () => {
+      dragging = false;
+      host.style.cursor = "grab";
     };
     window.addEventListener("pointermove", onMove);
+    host.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointerup", onUp);
 
     const onResize = () => {
       camera.aspect = host.clientWidth / host.clientHeight;
@@ -157,7 +192,7 @@ export default function HeroScene() {
 
     const clock = new THREE.Clock();
     const SCAN_SECONDS = 2.2;
-    let materialized = 0; // how many meshes have flipped to chrome
+    let materialized = 0;
     const meshes: THREE.Mesh[] = [torus, ...drops.map((d) => d.mesh)];
     let raf = 0;
 
@@ -165,7 +200,6 @@ export default function HeroScene() {
       raf = requestAnimationFrame(tick);
       const t = clock.getElapsedTime();
 
-      // Intro scan (skipped for reduced motion).
       const scanY = reduced ? 10 : -4 + (t / SCAN_SECONDS) * 9;
       if (materialized < meshes.length) {
         for (const m of meshes) {
@@ -181,33 +215,49 @@ export default function HeroScene() {
         scan.visible = false;
       }
 
-      torus.rotation.y = t * 0.25;
+      // O rotation: idle spin + drag inertia + a touch of scroll.
+      spinAcc += spinVel;
+      spinVel *= 0.95;
+      torus.rotation.y = t * 0.25 + spinAcc + window.scrollY * 0.0035;
       torus.rotation.x = 0.45 + Math.sin(t * 0.3) * 0.08;
 
+      // Droplets: spring toward their bobbing home; the cursor's view ray
+      // shoves any drop it grazes.
+      raycaster.setFromCamera(pointer, camera);
       for (const d of drops) {
-        d.mesh.position.y = d.base.y + Math.sin(t * d.speed + d.phase) * d.amp;
-        d.mesh.position.x = d.base.x + Math.cos(t * d.speed * 0.7 + d.phase) * d.amp * 0.5;
+        const home = d.base.clone();
+        home.y += Math.sin(t * d.speed + d.phase) * d.amp;
+        home.x += Math.cos(t * d.speed * 0.7 + d.phase) * d.amp * 0.5;
+        raycaster.ray.closestPointToPoint(d.mesh.position, closest);
+        const reach = d.mesh.scale.x + 0.55;
+        const dist = closest.distanceTo(d.mesh.position);
+        if (dist < reach) {
+          const push = d.mesh.position.clone().sub(closest).normalize();
+          d.vel.addScaledVector(push, (reach - dist) * 0.045);
+        }
+        d.vel.addScaledVector(home.sub(d.mesh.position), 0.018);
+        d.vel.multiplyScalar(0.92);
+        d.mesh.position.add(d.vel);
       }
 
-      // Dust drift + pointer pull.
-      pointerWorld.set(pointer.x * 5, pointer.y * 3, 1);
+      // Dust drift + soft pointer pull (clamped so it never clots).
+      const px = pointer.x * 5;
+      const py = pointer.y * 3;
       const pos = dustGeo.attributes.position as THREE.BufferAttribute;
       for (let i = 0; i < COUNT; i++) {
         const ix = i * 3;
-        const dx = pointerWorld.x - positions[ix];
-        const dy = pointerWorld.y - positions[ix + 1];
-        const dsq = dx * dx + dy * dy + 0.5;
-        velocities[ix] += (dx / dsq) * 0.0016 + (Math.random() - 0.5) * 0.0004;
-        velocities[ix + 1] += (dy / dsq) * 0.0016 + (Math.random() - 0.5) * 0.0004;
-        velocities[ix] *= 0.985;
-        velocities[ix + 1] *= 0.985;
+        const dx = px - positions[ix];
+        const dy = py - positions[ix + 1];
+        const dsq = dx * dx + dy * dy + 1.5;
+        velocities[ix] += (dx / dsq) * 0.0009 + (Math.random() - 0.5) * 0.0004;
+        velocities[ix + 1] += (dy / dsq) * 0.0009 + (Math.random() - 0.5) * 0.0004;
+        velocities[ix] = Math.max(-0.02, Math.min(0.02, velocities[ix] * 0.985));
+        velocities[ix + 1] = Math.max(-0.02, Math.min(0.02, velocities[ix + 1] * 0.985));
         positions[ix] += velocities[ix];
         positions[ix + 1] += velocities[ix + 1];
       }
       pos.needsUpdate = true;
 
-      // Orbit parallax: the camera leans toward the pointer and keeps looking
-      // at the O.
       if (!reduced) {
         camera.position.x += (pointer.x * 1.6 - camera.position.x) * 0.04;
         camera.position.y += (0.4 + pointer.y * 0.9 - camera.position.y) * 0.04;
@@ -231,6 +281,8 @@ export default function HeroScene() {
       cancelAnimationFrame(raf);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pointermove", onMove);
+      host.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
       window.removeEventListener("resize", onResize);
       renderer.dispose();
       sphereGeo.dispose();
@@ -243,7 +295,10 @@ export default function HeroScene() {
     <div
       ref={mount}
       aria-hidden
-      className="pointer-events-none absolute inset-0 [&>canvas]:h-full [&>canvas]:w-full"
+      // Interactive: drag to spin, click droplets to flick. touch-pan-y keeps
+      // vertical scrolling alive on phones; the hero copy sits above (z-10)
+      // so links and buttons stay clickable.
+      className="absolute inset-0 cursor-grab touch-pan-y [&>canvas]:h-full [&>canvas]:w-full"
     />
   );
 }
