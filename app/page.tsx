@@ -33,16 +33,16 @@ export default function Home() {
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute left-1/2 top-0 h-[40rem] w-[70rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(163,194,240,0.35),transparent)]" />
           <HeroCollage />
-          <div className="relative mx-auto flex min-h-[88svh] max-w-3xl flex-col items-center justify-center px-5 py-24 text-center">
+          <div className="relative mx-auto flex min-h-[88svh] max-w-2xl flex-col items-center justify-center px-5 py-24 text-center">
             <p className="glass mb-6 rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest text-accent">
               BETA — FREE WHILE WE BUILD
             </p>
-            <h1 className="text-5xl font-bold leading-[1.02] tracking-tight md:text-7xl">
+            <h1 className="text-5xl font-bold leading-[1.02] tracking-tight md:text-6xl lg:text-7xl">
               Your TikTok ad machine,
               <br />
-              <span className="serif-accent mercury-text text-6xl md:text-8xl">on autopilot</span>
+              <span className="serif-accent mercury-text text-6xl md:text-7xl lg:text-8xl">on autopilot</span>
             </h1>
-            <p className="mt-7 max-w-xl text-lg leading-relaxed text-muted md:text-xl">
+            <p className="mt-7 max-w-lg text-lg leading-relaxed text-muted">
               Connect your account, pick a creator, generate the video, set a
               schedule — and it posts. Built to grow our own app, open to every
               marketer.

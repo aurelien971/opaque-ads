@@ -65,18 +65,18 @@ export default function HeroCollage() {
   }, []);
 
   return (
-    <div ref={field} aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
+    <div ref={field} aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
       {/* far layer — blurred */}
       <WipeCard after="/journey/after-film.jpg" label="Film 35mm" depth={0.6}
-        className="left-[3%] top-[6%] w-32 rotate-[-9deg] opacity-60 blur-[1.5px]" />
+        className="left-[2%] top-[5%] w-28 rotate-[-9deg] opacity-60 blur-[1.5px]" />
       <WipeCard after="/journey/after-polaroid.jpg" label="Polaroid" depth={0.5}
-        className="right-[4%] top-[58%] w-28 rotate-[8deg] opacity-50 blur-[2px] [animation-delay:-2s]" />
+        className="right-[3%] top-[62%] w-28 rotate-[8deg] opacity-50 blur-[2px] [animation-delay:-2s]" />
       {/* near layer — sharp */}
       <WipeCard after="/journey/after-pixar.jpg" label="Pixar 3D" depth={1.4}
-        className="left-[9%] top-[38%] w-44 rotate-[-5deg] [animation-delay:-1s]" />
+        className="left-[4%] top-[42%] w-40 rotate-[-5deg] [animation-delay:-1s]" />
       <div
         data-depth={1.2}
-        className="floaty absolute right-[8%] top-[10%] aspect-[9/16] w-44 overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(11,13,18,0.18)] ring-1 ring-black/5 rotate-[6deg] [animation-delay:-3s]"
+        className="floaty absolute right-[3%] top-[9%] aspect-[9/16] w-40 overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(11,13,18,0.18)] ring-1 ring-black/5 rotate-[6deg] [animation-delay:-3s]"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/journey/post.jpg" alt="" className="h-full w-full object-cover object-[50%_42%]" />
@@ -84,7 +84,7 @@ export default function HeroCollage() {
       {/* the receipt */}
       <div
         data-depth={0.9}
-        className="floaty glass absolute bottom-[14%] right-[14%] flex items-center gap-3 rounded-2xl px-4 py-3 [animation-delay:-4s]"
+        className="floaty glass absolute bottom-[9%] right-[17%] flex items-center gap-3 rounded-2xl px-4 py-3 [animation-delay:-4s]"
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white">✓</span>
         <div>
