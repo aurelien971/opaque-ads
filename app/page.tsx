@@ -43,8 +43,7 @@ export default function Home() {
               <span className="serif-accent mercury-text text-6xl md:text-7xl lg:text-8xl">They post themselves.</span>
             </h1>
             <p className="mt-7 max-w-lg text-lg leading-relaxed text-muted">
-              Upload your videos in bulk, set a posting calendar, and Opaque
-              Studio publishes them to your TikTok account on time — then shows
+              Upload your videos in bulk, set a posting calendar, and OAISIS Labs publishes them to your TikTok account on time — then shows
               you how each one did.
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
