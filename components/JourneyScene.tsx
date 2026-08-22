@@ -222,7 +222,7 @@ export default function JourneyScene({
     // (right of the hero copy, same size) while the path recedes diagonally
     // up and away toward the next steps.
     const OFFSET = new THREE.Vector3(-1.2, 1.5, 5.4);
-    const LOOK = new THREE.Vector3(-0.5, 0.2, -0.3);
+    const LOOK = new THREE.Vector3(-0.5, 0.95, -0.3);
     const camFor = (i: number) => {
       const p = curve.getPointAt(NODE_T[i]);
       return { pos: p.clone().add(OFFSET), look: p.clone().add(LOOK) };
@@ -287,7 +287,7 @@ export default function JourneyScene({
         const el = cardRefs.current[n.i];
         if (!el) return;
         tmp.copy(n.p);
-        tmp.y += 0.75;
+        tmp.y += 0.6;
         tmp.project(camera);
         const behind = tmp.z > 1;
         const x = (tmp.x * 0.5 + 0.5) * w;
