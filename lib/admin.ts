@@ -27,7 +27,7 @@ export function adminApp(): App {
     throw new Error("FIREBASE_SERVICE_ACCOUNT is missing private_key/client_email.");
   }
   app = initializeApp({
-    credential: cert(sa),
+    credential: cert(sa as import("firebase-admin/app").ServiceAccount),
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
   return app;
