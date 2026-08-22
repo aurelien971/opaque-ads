@@ -96,12 +96,12 @@ export default function JourneyScene({
     // ---- The path ----
     const curve = new THREE.CatmullRomCurve3(
       [
-        new THREE.Vector3(-7, -3.2, 4),
-        new THREE.Vector3(-3.5, -1.8, 2),
-        new THREE.Vector3(-0.5, -0.9, 0.2),
-        new THREE.Vector3(2.5, 0.1, -1.8),
-        new THREE.Vector3(5.5, 1.2, -4),
-        new THREE.Vector3(8.5, 2.6, -6.5),
+        new THREE.Vector3(-7, -2.6, 2.5),
+        new THREE.Vector3(-3.5, -1.6, 1.4),
+        new THREE.Vector3(-0.5, -0.8, 0.3),
+        new THREE.Vector3(2.5, 0.1, -0.9),
+        new THREE.Vector3(5.5, 1.1, -2.2),
+        new THREE.Vector3(8.5, 2.3, -3.8),
       ],
       false,
       "catmullrom",
@@ -221,8 +221,8 @@ export default function JourneyScene({
     // world offset, so the active node always lands at the same screen spot
     // (right of the hero copy, same size) while the path recedes diagonally
     // up and away toward the next steps.
-    const OFFSET = new THREE.Vector3(-2.6, 1.6, 4.6);
-    const LOOK = new THREE.Vector3(1.4, 0.15, -0.8);
+    const OFFSET = new THREE.Vector3(-1.2, 1.5, 5.4);
+    const LOOK = new THREE.Vector3(-0.5, 0.2, -0.3);
     const camFor = (i: number) => {
       const p = curve.getPointAt(NODE_T[i]);
       return { pos: p.clone().add(OFFSET), look: p.clone().add(LOOK) };
