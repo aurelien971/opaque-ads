@@ -173,8 +173,8 @@ export default function JourneyScene({
     const drops: { m: THREE.Mesh; b: THREE.Vector3; s: number; ph: number }[] = [];
     for (let i = 0; i < 14; i++) {
       const m = new THREE.Mesh(sphereGeo, chrome);
-      m.scale.setScalar(0.1 + Math.random() * 0.3);
-      m.position.set((Math.random() - 0.5) * 18, (Math.random() - 0.5) * 8 + 1, -4 - Math.random() * 8);
+      m.scale.setScalar(0.08 + Math.random() * 0.22);
+      m.position.set((Math.random() - 0.5) * 22, (Math.random() - 0.5) * 9 + 1.5, -9 - Math.random() * 10);
       drops.push({ m, b: m.position.clone(), s: 0.2 + Math.random() * 0.4, ph: Math.random() * 6 });
       scene.add(m);
     }
@@ -217,21 +217,18 @@ export default function JourneyScene({
     };
     window.addEventListener("resize", onResize);
 
-    // For a given step: camera sits behind-and-above the node, looking past it
-    // along the path so the next node is visible in the distance.
+    // For a given step: the camera parks front-left of the node at a fixed
+    // world offset, so the active node always lands at the same screen spot
+    // (right of the hero copy, same size) while the path recedes diagonally
+    // up and away toward the next steps.
+    const OFFSET = new THREE.Vector3(-2.6, 1.6, 4.6);
+    const LOOK = new THREE.Vector3(1.4, 0.15, -0.8);
     const camFor = (i: number) => {
-      const t = NODE_T[i];
-      const p = curve.getPointAt(t);
-      const ahead = curve.getPointAt(Math.min(1, t + 0.18));
-      const dir = ahead.clone().sub(p).normalize();
-      const pos = p.clone().sub(dir.clone().multiplyScalar(4.6));
-      pos.y += 1.9;
-      pos.x -= 1.2; // keep the node right of the hero copy
-      const look = p.clone().add(dir.clone().multiplyScalar(1.2));
-      return { pos, look };
+      const p = curve.getPointAt(NODE_T[i]);
+      return { pos: p.clone().add(OFFSET), look: p.clone().add(LOOK) };
     };
     // Intro: wide overview, then glide to step 0.
-    const overview = { pos: new THREE.Vector3(-6, 4, 10), look: new THREE.Vector3(1, 0, -1) };
+    const overview = { pos: new THREE.Vector3(-9, 5, 13), look: new THREE.Vector3(2, 0, -2) };
     camera.position.copy(overview.pos);
     const lookCur = overview.look.clone();
 
@@ -296,7 +293,7 @@ export default function JourneyScene({
         const x = (tmp.x * 0.5 + 0.5) * w;
         const y = (-tmp.y * 0.5 + 0.5) * h;
         const dist = camera.position.distanceTo(n.p);
-        const scale = Math.max(0.45, Math.min(1, 5.2 / dist));
+        const scale = Math.max(0.4, Math.min(1.15, 6.2 / dist));
         const on = n.i === a;
         el.style.transform = `translate(-50%, -100%) translate(${x}px, ${y}px) scale(${on ? scale : scale * 0.82})`;
         el.style.opacity = behind ? "0" : on ? "1" : String(Math.max(0.25, scale * 0.8));
@@ -330,7 +327,7 @@ export default function JourneyScene({
               cardRefs.current[i] = el;
             }}
             onClick={() => onSelect(i)}
-            className={`absolute left-0 top-0 w-56 cursor-pointer select-none rounded-2xl p-2.5 transition-[box-shadow,border-color] duration-500 ${
+            className={`absolute left-0 top-0 w-60 cursor-pointer select-none rounded-2xl p-2.5 transition-[box-shadow,border-color] duration-500 ${
               i === active
                 ? "glass-bright shadow-[0_0_60px_rgba(163,194,240,0.35)] sway"
                 : "glass hover:border-accent/40 sway"
