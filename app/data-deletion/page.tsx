@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
-export const metadata = { title: "Data Deletion — Opaque Studio" };
+export const metadata = { title: "Data Deletion — OAISIS Labs" };
 
 export default function DataDeletion() {
   return (

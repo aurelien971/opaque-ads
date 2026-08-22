@@ -2,7 +2,7 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
-export const metadata = { title: "Pricing — Opaque Studio" };
+export const metadata = { title: "Pricing — OAISIS Labs" };
 
 const TIERS = [
   {
@@ -54,7 +54,7 @@ export default function Pricing() {
           Simple <span className="mercury-text">pricing</span>
         </h1>
         <p className="mt-3 max-w-xl text-muted">
-          Opaque Studio is in beta: every plan is free right now, and paid
+          OAISIS Labs is in beta: every plan is free right now, and paid
           billing starts only when we exit beta — with notice, never
           retroactively. Lock in your account today.
         </p>

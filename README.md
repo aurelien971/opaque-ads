@@ -1,4 +1,4 @@
-# Opaque Studio
+# OAISIS Labs
 
 Schedule your TikTok videos; they post themselves. Next.js 15 + Firebase
 (Auth / Firestore / Storage) + TikTok Content Posting API, on Vercel.
@@ -16,7 +16,7 @@ npm install && npm run dev
 ## Setup checklist (everything the app needs to go live)
 
 ### 1. Firebase — a NEW project just for this platform
-1. console.firebase.google.com → Add project (e.g. `opaque-studio`).
+1. console.firebase.google.com → Add project (e.g. `oaisislabs`).
 2. **Authentication → Sign-in method → Email/Password → Enable.**
 3. **Firestore Database → Create** (production mode, any region) → Rules tab →
    paste `firestore.rules` → Publish.

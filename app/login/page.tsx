@@ -2,7 +2,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import AuthForm from "@/components/AuthForm";
 
-export const metadata = { title: "Sign in — Opaque Studio" };
+export const metadata = { title: "Sign in — OAISIS Labs" };
 
 export default function Login() {
   return (

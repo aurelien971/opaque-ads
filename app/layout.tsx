@@ -7,9 +7,9 @@ const serif = Instrument_Serif({ weight: "400", style: "italic", subsets: ["lati
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.oaisislabs.com"),
-  title: "Opaque Studio — Schedule your TikTok videos. They post themselves.",
+  title: "OAISIS Labs — Schedule your TikTok videos. They post themselves.",
   description:
-    "Upload your videos in bulk, set a posting calendar, and Opaque Studio publishes them to your TikTok account on schedule — then shows you how each one performed.",
+    "Upload your videos in bulk, set a posting calendar, and OAISIS Labs publishes them to your TikTok account on schedule — then shows you how each one performed.",
   icons: { icon: "/favicon.svg" },
 };
 

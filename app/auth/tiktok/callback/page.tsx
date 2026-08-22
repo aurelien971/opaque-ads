@@ -32,7 +32,7 @@ function CallbackInner() {
         return;
       }
       if (!user) {
-        setStatus("Sign in to Opaque Studio first, then reconnect TikTok.");
+        setStatus("Sign in to OAISIS Labs first, then reconnect TikTok.");
         return;
       }
       const res = await fetch("/api/tiktok/token", {

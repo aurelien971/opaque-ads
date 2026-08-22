@@ -10,7 +10,7 @@ export default function Nav() {
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2">
           <Logo size={24} className="text-fg" />
-          <span className="text-[17px] font-bold tracking-tight">Opaque Studio</span>
+          <span className="text-[17px] font-bold tracking-tight">OAISIS Labs</span>
         </Link>
         <div className="flex items-center gap-6 text-sm">
           <Link href="/#how" className="hidden text-muted hover:text-fg sm:block">

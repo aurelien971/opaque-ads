@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
-export const metadata = { title: "Privacy Policy — Opaque Studio" };
+export const metadata = { title: "Privacy Policy — OAISIS Labs" };
 
 export default function Privacy() {
   return (
@@ -9,7 +9,7 @@ export default function Privacy() {
       <Nav />
       <main className="mx-auto max-w-3xl px-5 py-16 leading-relaxed">
         <h1 className="text-3xl font-bold">Privacy Policy</h1>
-        <p className="mt-3 text-muted">Opaque Studio is operated by OAISIS Labs (“we”, “us”). This policy explains what we collect and why.</p>
+        <p className="mt-3 text-muted">OAISIS Labs (“we”, “us”) operates this service. This policy explains what we collect and why.</p>
         <p className="mt-2 text-sm text-muted">Last updated: August 17, 2026</p>
 
         {[
@@ -31,7 +31,7 @@ export default function Privacy() {
           ],
           [
             "Retention and deletion",
-            "Your data is retained while your account is active. Deleting a video removes its file from storage. Disconnecting TikTok deletes the associated tokens immediately. Deleting your account removes your account data, content, and tokens within 30 days — see our Data Deletion page for the exact steps. You may also revoke Opaque Studio's access directly in TikTok's app settings at any time.",
+            "Your data is retained while your account is active. Deleting a video removes its file from storage. Disconnecting TikTok deletes the associated tokens immediately. Deleting your account removes your account data, content, and tokens within 30 days — see our Data Deletion page for the exact steps. You may also revoke OAISIS Labs's access directly in TikTok's app settings at any time.",
           ],
           [
             "Third-party services",

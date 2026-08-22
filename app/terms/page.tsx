@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
-export const metadata = { title: "Terms of Service — Opaque Studio" };
+export const metadata = { title: "Terms of Service — OAISIS Labs" };
 
 export default function Terms() {
   return (
@@ -13,8 +13,8 @@ export default function Terms() {
 
         {[
           [
-            "1. What Opaque Studio is",
-            "Opaque Studio (“the Service”) is a software platform operated by OAISIS Labs (“we”, “us”) that lets registered users upload short-form videos, schedule them on a calendar, and publish them to third-party social platforms — including TikTok — on accounts the user owns and connects themselves, with performance feedback on what was published.",
+            "1. What OAISIS Labs is",
+            "OAISIS Labs (“the Service”, “we”, “us”) is a software platform that lets registered users upload short-form videos, schedule them on a calendar, and publish them to third-party social platforms — including TikTok — on accounts the user owns and connects themselves, with performance feedback on what was published.",
           ],
           [
             "2. Accounts",
