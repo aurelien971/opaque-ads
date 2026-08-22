@@ -9,6 +9,7 @@ export default function Privacy() {
       <Nav />
       <main className="mx-auto max-w-3xl px-5 py-16 leading-relaxed">
         <h1 className="text-3xl font-bold">Privacy Policy</h1>
+        <p className="mt-3 text-muted">Opaque Studio is operated by OAISIS Labs (“we”, “us”). This policy explains what we collect and why.</p>
         <p className="mt-2 text-sm text-muted">Last updated: August 17, 2026</p>
 
         {[

@@ -14,7 +14,7 @@ export default function Terms() {
         {[
           [
             "1. What Opaque Studio is",
-            "Opaque Studio (“the Service”) is a software platform operated by Opaque (“we”, “us”) that lets registered users generate short-form video creatives with AI, manage a content queue, and publish content to third-party social platforms — including TikTok — on accounts the user owns and connects themselves.",
+            "Opaque Studio (“the Service”) is a software platform operated by OAISIS Labs (“we”, “us”), the company behind the Opaque app, that lets registered users generate short-form video creatives with AI, manage a content queue, and publish content to third-party social platforms — including TikTok — on accounts the user owns and connects themselves.",
           ],
           [
             "2. Accounts",

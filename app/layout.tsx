@@ -3,6 +3,7 @@ import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.oaisislabs.com"),
   title: "Opaque Studio — AI creatives, published to TikTok",
   description:
     "Generate scroll-stopping before/after video creatives with AI, add music, and publish them straight to your TikTok account. The creative engine built to grow Opaque, open to every marketer.",

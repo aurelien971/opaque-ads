@@ -29,10 +29,10 @@ Firebase project config defaults are baked into `lib/firebase.ts`
    consoles. Add a Web App (Project settings → Add app → Web) and set
    `NEXT_PUBLIC_FIREBASE_APP_ID`.
 2. **Vercel**: `vercel login`, then `vercel --prod`. Add the env vars above.
-3. **TikTok developer portal**: add the production domain as a verified URL
+3. **TikTok developer portal**: add https://www.oaisislabs.com as a verified URL
    property (`public/tiktokAGLUlSoHS17HgfsFqZBgNiqR7yVkjm6x.txt` is served at
    the site root; replace with the new file if TikTok issues a new code).
-   Set the redirect URI to `https://<domain>/auth/tiktok/callback`.
+   Set the redirect URI to `https://www.oaisislabs.com/auth/tiktok/callback`.
    Terms: `/terms` · Privacy: `/privacy`.
 4. **Firebase Hosting (old site)**: replace with a redirect to the new domain.
 

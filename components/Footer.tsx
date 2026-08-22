@@ -7,7 +7,7 @@ export default function Footer() {
         <div>
           <span className="mercury-text font-bold">Opaque Studio</span>
           <span className="ml-3">
-            © {new Date().getFullYear()} Opaque. All rights reserved.
+            © {new Date().getFullYear()} OAISIS Labs. All rights reserved.
           </span>
         </div>
         <div className="flex flex-wrap gap-5">
