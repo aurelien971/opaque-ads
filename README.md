@@ -28,7 +28,7 @@ npm install && npm run dev
 
 ### 2. TikTok — developers.tiktok.com → your app
 - Redirect URI: `https://www.oaisislabs.com/auth/tiktok/callback`
-- Scopes: `user.info.basic`, `video.upload`, `video.publish`, `video.list`
+- Scopes: `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.upload`, `video.publish`, `video.list` (Display API)
 - Copy Client key → `NEXT_PUBLIC_TIKTOK_CLIENT_KEY`, Client secret →
   `TIKTOK_CLIENT_SECRET`. Keep `TIKTOK_POST_MODE=inbox` until the app is
   audited (unaudited apps can only deliver to the user's TikTok inbox/drafts).
