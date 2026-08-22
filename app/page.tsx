@@ -1,12 +1,14 @@
 "use client";
-// The landing: a living Three.js hero (chrome mercury field, orbit parallax,
-// pointer dust, scan-line intro) with glass UI over it.
+// The landing: the product as a journey — a glowing 3D path with one card per
+// step (connect → creator → generate → schedule → post), glass UI over it.
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { STEPS } from "@/components/JourneyScene";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
-const HeroScene = dynamic(() => import("@/components/HeroScene"), { ssr: false });
+const JourneyScene = dynamic(() => import("@/components/JourneyScene"), { ssr: false });
 
 const FEATURES = [
   {
@@ -41,57 +43,73 @@ const FEATURES = [
   },
 ];
 
-const STEPS = [
-  ["Create", "Upload photos, pick a template, generate a batch of unique video creatives."],
-  ["Review", "Approve the ones you love, tweak captions, pick the song."],
-  ["Connect", "Link your TikTok account with one tap — you approve every permission."],
-  ["Publish", "Post now or schedule the week. Track what retains, double down."],
-];
 
 export default function Home() {
+  const [active, setActive] = useState(0);
+  const [touched, setTouched] = useState(false);
+  // Auto-advance through the steps until the visitor takes the wheel.
+  useEffect(() => {
+    if (touched) return;
+    const id = setInterval(() => setActive((a) => (a + 1) % STEPS.length), 4200);
+    return () => clearInterval(id);
+  }, [touched]);
+  const pick = (i: number) => {
+    setTouched(true);
+    setActive(i);
+  };
   return (
     <>
       <Nav />
       <main>
-        {/* Hero — the living scene */}
-        <section className="relative -mt-14 flex min-h-[100svh] items-center overflow-hidden">
-          <HeroScene />
-          {/* Readability scrim behind the copy + bottom fade into the page */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-3/5 bg-gradient-to-r from-ink/95 via-ink/55 to-transparent" />
+        {/* Hero — the journey: the product, step by step, on a glowing path */}
+        <section className="relative -mt-14 flex min-h-[100svh] items-end overflow-hidden md:items-center">
+          <JourneyScene active={active} onSelect={pick} />
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-ink/90 via-ink/40 to-transparent" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-ink" />
-          <div className="relative z-10 mx-auto w-full max-w-6xl px-5 pt-14">
-            <div className="max-w-xl">
+          <div className="pointer-events-none relative z-10 mx-auto w-full max-w-6xl px-5 pb-16 pt-14 md:pb-0">
+            <div className="pointer-events-auto max-w-md">
               <p className="glass mb-5 inline-block rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest text-accent">
                 BETA — FREE WHILE WE BUILD
               </p>
-              <h1 className="text-5xl font-bold leading-[1.05] md:text-7xl">
-                <span className="mercury-text">AI creatives,</span>
+              <h1 className="text-4xl font-bold leading-[1.05] md:text-6xl">
+                <span className="mercury-text">Your TikTok</span>
                 <br />
-                published to TikTok.
+                ad machine.
               </h1>
-              <p className="mt-6 max-w-md text-lg leading-relaxed text-muted">
-                Opaque Studio turns your product photos into scroll-stopping
-                before/after videos, scores them with music, and publishes them
-                straight to your TikTok account.
+              <p className="mt-5 max-w-sm text-base leading-relaxed text-muted md:text-lg">
+                Connect your account, pick a creator, generate the video, set a
+                schedule — and it posts. Five steps, on repeat.
               </p>
-              <div className="mt-9 flex flex-wrap gap-4">
-                <Link
-                  href="/signup"
-                  className="glass-bright rounded-full px-7 py-3.5 font-semibold text-fg transition"
+              {/* Step control */}
+              <div className="mt-7 flex items-center gap-3">
+                <button
+                  onClick={() => pick((active + 1) % STEPS.length)}
+                  className="glass-bright rounded-full px-6 py-3 font-semibold text-fg transition"
                 >
-                  Start free
+                  {active === STEPS.length - 1 ? "Start over" : `Next: ${STEPS[active + 1].title}`}
+                </button>
+                <div className="flex gap-1.5">
+                  {STEPS.map((s, i) => (
+                    <button
+                      key={s.title}
+                      aria-label={s.title}
+                      onClick={() => pick(i)}
+                      className={`h-2 rounded-full transition-all ${
+                        i === active ? "w-6 bg-accent" : "w-2 bg-stroke hover:bg-muted"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="mt-6 flex gap-4 text-sm">
+                <Link href="/signup" className="text-accent hover:underline">
+                  Start free →
                 </Link>
-                <Link
-                  href="/#features"
-                  className="glass rounded-full px-7 py-3.5 font-semibold text-fg transition hover:border-accent/50"
-                >
+                <Link href="/#features" className="text-muted hover:text-fg">
                   Explore the studio
                 </Link>
               </div>
             </div>
-          </div>
-          <div className="scroll-hint absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-muted">
-            ↓
           </div>
         </section>
 
@@ -124,12 +142,12 @@ export default function Home() {
         {/* How it works */}
         <section id="how" className="mx-auto max-w-6xl px-5 py-16">
           <h2 className="text-3xl font-bold">How it works</h2>
-          <div className="mt-10 grid gap-8 md:grid-cols-4">
-            {STEPS.map(([title, body], i) => (
-              <div key={title}>
+          <div className="mt-10 grid gap-8 sm:grid-cols-2 md:grid-cols-5">
+            {STEPS.map((s, i) => (
+              <div key={s.title}>
                 <div className="mercury-text text-4xl font-bold">{i + 1}</div>
-                <h3 className="mt-2 font-semibold">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{body}</p>
+                <h3 className="mt-2 font-semibold">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{s.caption}</p>
               </div>
             ))}
           </div>

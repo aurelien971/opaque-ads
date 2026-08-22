@@ -110,3 +110,11 @@ body {
 .chip-in {
   animation: chipin 4.5s ease-in-out infinite;
 }
+
+/* Step cards drifting on the path. */
+@keyframes sway {
+  0%, 100% { rotate: -1.2deg; translate: 0 0; }
+  50% { rotate: 1.2deg; translate: 0 -6px; }
+}
+.sway { animation: sway 5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .sway { animation: none; } }
