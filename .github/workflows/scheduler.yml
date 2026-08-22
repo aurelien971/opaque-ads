@@ -1,0 +1,18 @@
+# The clock: every 5 minutes, ask the server to publish whatever is due and
+# refresh results. Needs one repo secret: CRON_SECRET (same value as Vercel).
+name: Scheduler
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish due posts
+        run: |
+          curl -sS --fail-with-body \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.oaisislabs.com/api/cron/publish

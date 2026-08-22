@@ -36,7 +36,7 @@ npm install && npm run dev
 
 ### 3. Scheduler clock
 - `CRON_SECRET` = any long random string.
-- `vercel.json` runs `/api/cron/publish` once a day (Vercel Hobby only allows daily crons).
+- `.github/workflows/scheduler.yml` hits `/api/cron/publish` every 5 minutes (free). Add repo secret `CRON_SECRET`. `vercel.json` adds a daily sweep as backup.
   For minute-precision, add a free job at cron-job.org: GET
   `https://www.oaisislabs.com/api/cron/publish` every 5 min with header
   `Authorization: Bearer <CRON_SECRET>`.
