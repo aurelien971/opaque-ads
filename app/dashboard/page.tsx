@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [composing, setComposing] = useState<Post | null>(null);
   const [notice, setNotice] = useState("");
   const [running, setRunning] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   // Cadence
@@ -174,7 +175,21 @@ export default function Dashboard() {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
           {/* 2 · Upload */}
-          <section className="rounded-2xl border border-dashed border-stroke bg-surface p-6 text-center">
+          <section
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("video/"));
+              const dt = new DataTransfer();
+              files.forEach((f) => dt.items.add(f));
+              onUpload(dt.files);
+            }}
+            className={`rounded-2xl border-2 border-dashed p-6 text-center transition ${
+              dragging ? "border-accent bg-accent/5 shadow-[0_0_40px_rgba(84,125,204,0.25)]" : "border-stroke bg-surface"
+            }`}
+          >
             <p className="text-xs font-bold tracking-widest text-accent">STEP 2</p>
             <input
               ref={fileInput}
@@ -198,7 +213,7 @@ export default function Dashboard() {
                 <button onClick={() => fileInput.current?.click()} className="glass-bright mt-3 rounded-full px-6 py-2.5 text-sm font-semibold">
                   Upload videos
                 </button>
-                <p className="mt-2 text-xs text-muted">Select as many as you like. MP4 or MOV, up to 64 MB each.</p>
+                <p className="mt-2 text-xs text-muted">{dragging ? "Drop them!" : "Or drag videos here. MP4 or MOV, up to 64 MB each — as many as you like."}</p>
               </>
             )}
             {drafts.length > 0 && (
