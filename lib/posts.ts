@@ -25,7 +25,14 @@ export type Post = {
   videoUrl: string;
   storagePath: string;
   status: "draft" | "scheduled" | "posted" | "failed";
+  hashtags?: string;
   privacy?: string;
+  allowComments?: boolean;
+  allowDuet?: boolean;
+  allowStitch?: boolean;
+  commercial?: boolean;
+  yourBrand?: boolean;
+  brandedContent?: boolean;
   dueAt?: Timestamp | null;
   postedAt?: Timestamp;
   createdAt?: Timestamp;

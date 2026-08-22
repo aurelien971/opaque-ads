@@ -39,7 +39,11 @@ export async function publishPost(postId: string, opts?: Partial<PostOptions>) {
   const conn = await connectionFor(p.uid);
   if (!conn) throw new Error("TikTok is not connected.");
   const options: PostOptions = {
-    caption: opts?.caption ?? p.caption ?? "",
+    caption:
+      opts?.caption ??
+      [p.caption, p.hashtags ? String(p.hashtags).split(/[\s,]+/).filter(Boolean).map((t: string) => (t.startsWith("#") ? t : `#${t}`)).join(" ") : ""]
+        .filter(Boolean)
+        .join(" "),
     privacy: opts?.privacy ?? p.privacy ?? "SELF_ONLY",
     allowComments: opts?.allowComments ?? p.allowComments ?? true,
     allowDuet: opts?.allowDuet ?? p.allowDuet ?? true,

@@ -7,13 +7,13 @@ import { deleteField, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import PostComposer from "@/components/PostComposer";
+import PostEditor from "@/components/PostEditor";
 import Studio from "@/components/Studio";
 import { auth, db, firebaseConfigured } from "@/lib/firebase";
 import { useRequireAuth } from "@/lib/auth";
 import { buildAuthUrl, tiktokClientKey, type TikTokConnection } from "@/lib/tiktok";
 import {
   autoSchedule,
-  deletePost,
   scheduleAt,
   unschedule,
   updatePost,
@@ -23,6 +23,7 @@ import {
 } from "@/lib/posts";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+const PRIVACY_LABEL: Record<string, string> = { PUBLIC_TO_EVERYONE: "Public", MUTUAL_FOLLOW_FRIENDS: "Friends", FOLLOWER_OF_CREATOR: "Followers", SELF_ONLY: "Only me" };
 
 export default function Dashboard() {
   const { user, loading } = useRequireAuth();
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [uploading, setUploading] = useState<{ done: number; total: number; pct: number } | null>(null);
   const [composing, setComposing] = useState<Post | null>(null);
+  const [editing, setEditing] = useState<Post | null>(null);
   const [notice, setNotice] = useState("");
   const [running, setRunning] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -232,7 +234,7 @@ export default function Dashboard() {
             {drafts.length > 0 && (
               <div className="mt-6 grid grid-cols-2 gap-3 text-left sm:grid-cols-3 md:grid-cols-4">
                 {drafts.map((p) => (
-                  <PostCard key={p.id} p={p} onDelete={() => deletePost(p)} onPublish={() => (connection ? setComposing(p) : setNotice("Connect TikTok first."))} />
+                  <PostCard key={p.id} p={p} onOpen={() => setEditing(p)} onPublish={() => (connection ? setComposing(p) : setNotice("Connect TikTok first."))} />
                 ))}
               </div>
             )}
@@ -324,22 +326,28 @@ export default function Dashboard() {
           ) : (
             <div className="mt-4 divide-y divide-stroke rounded-2xl border border-stroke bg-surface">
               {scheduled.map((p) => (
-                <div key={p.id} className="flex items-center gap-4 px-4 py-3">
+                <button
+                  key={p.id}
+                  onClick={() => setEditing(p)}
+                  className="flex w-full items-center gap-4 px-4 py-3 text-left transition hover:bg-ink"
+                >
                   <video src={p.videoUrl} preload="metadata" className="h-16 w-10 rounded-lg bg-ink object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{p.name}</p>
-                    <input
-                      placeholder="Caption…"
-                      value={p.caption}
-                      onChange={(e) => updatePost(p.id, { caption: e.target.value })}
-                      className="mt-1 w-full rounded-md border border-stroke bg-ink px-2 py-1 text-xs outline-none focus:border-accent"
-                    />
+                    <p className="truncate text-xs text-muted">
+                      {p.caption || <span className="italic">No caption yet — click to add</span>}
+                      {p.hashtags ? ` · ${p.hashtags}` : ""}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted">
+                      {PRIVACY_LABEL[p.privacy ?? "SELF_ONLY"]} · {p.allowComments === false ? "comments off" : "comments on"}
+                      {p.commercial ? " · commercial" : ""}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">{fmt(p)}</p>
-                    <button onClick={() => unschedule(p.id)} className="text-xs text-muted hover:text-red-500">Unschedule</button>
+                    <p className="text-[11px] text-accent">Edit details →</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -391,6 +399,18 @@ export default function Dashboard() {
       </main>
       <Footer />
 
+      {editing && (
+        <PostEditor
+          post={posts.find((p) => p.id === editing.id) ?? editing}
+          onClose={() => setEditing(null)}
+          onPostNow={() => {
+            if (!connection) { setNotice("Connect TikTok first."); return; }
+            setComposing(editing);
+            setEditing(null);
+          }}
+        />
+      )}
+
       {composing && connection && (
         <PostComposer
           creative={{ id: composing.id, caption: composing.caption }}
@@ -410,15 +430,18 @@ export default function Dashboard() {
   );
 }
 
-function PostCard({ p, onDelete, onPublish }: { p: Post; onDelete: () => void; onPublish: () => void }) {
+function PostCard({ p, onOpen, onPublish }: { p: Post; onOpen: () => void; onPublish: () => void }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-stroke bg-ink">
-      <video src={p.videoUrl} preload="metadata" className="aspect-[9/16] w-full bg-black object-cover" />
+    <div className="overflow-hidden rounded-xl border border-stroke bg-ink transition hover:border-accent/50">
+      <button onClick={onOpen} className="block w-full">
+        <video src={p.videoUrl} preload="metadata" className="aspect-[9/16] w-full bg-black object-cover" />
+      </button>
       <div className="p-2">
         <p className="truncate text-xs font-semibold">{p.name}</p>
+        <p className="truncate text-[11px] text-muted">{p.caption || "No caption yet"}</p>
         <div className="mt-1.5 flex justify-between text-[11px]">
-          <button onClick={onDelete} className="text-muted hover:text-red-500">Delete</button>
-          <button onClick={onPublish} className="font-semibold text-accent hover:underline">Post now</button>
+          <button onClick={onOpen} className="font-semibold text-accent hover:underline">Edit details</button>
+          <button onClick={onPublish} className="text-muted hover:text-fg">Post now</button>
         </div>
       </div>
     </div>
