@@ -7,6 +7,7 @@ import { deleteField, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import PostComposer from "@/components/PostComposer";
+import Studio from "@/components/Studio";
 import { auth, db, firebaseConfigured } from "@/lib/firebase";
 import { useRequireAuth } from "@/lib/auth";
 import { buildAuthUrl, tiktokClientKey, type TikTokConnection } from "@/lib/tiktok";
@@ -121,7 +122,7 @@ export default function Dashboard() {
       <Nav />
       <main className="mx-auto min-h-[80vh] max-w-6xl px-5 py-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Your calendar</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Your studio</h1>
           <div className="flex items-center gap-4 text-sm text-muted">
             <span>{user.email}</span>
             <button onClick={() => signOut(auth)} className="hover:text-fg">Sign out</button>
@@ -168,6 +169,8 @@ export default function Dashboard() {
             )}
           </div>
         </section>
+
+        {connection && <Studio getToken={() => user.getIdToken()} />}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
           {/* 2 · Upload */}

@@ -20,7 +20,7 @@ export type RunReport = {
   statsUpdated: number;
 };
 
-async function connectionFor(uid: string): Promise<StoredConnection | null> {
+export async function connectionFor(uid: string): Promise<StoredConnection | null> {
   const snap = await adminDb().doc(`users/${uid}`).get();
   const c = snap.data()?.tiktok as StoredConnection | undefined;
   if (!c?.accessToken) return null;

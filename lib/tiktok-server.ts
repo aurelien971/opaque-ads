@@ -183,3 +183,72 @@ export async function videoStats(token: string, ids: string[]): Promise<Record<s
   }
   return out;
 }
+
+// ---- Studio: the account and its videos (user.info.* + video.list scopes) ----
+
+export type TikTokProfile = {
+  displayName: string;
+  avatarUrl: string;
+  bio: string;
+  profileUrl: string;
+  verified: boolean;
+  followers: number;
+  following: number;
+  likes: number;
+  videos: number;
+};
+
+export async function userProfile(token: string): Promise<TikTokProfile> {
+  const fields =
+    "open_id,display_name,avatar_url,bio_description,profile_web_link,is_verified,follower_count,following_count,likes_count,video_count";
+  const res = await fetch(`${API}/user/info/?fields=${fields}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  const u = data.data?.user ?? {};
+  return {
+    displayName: u.display_name ?? "",
+    avatarUrl: u.avatar_url ?? "",
+    bio: u.bio_description ?? "",
+    profileUrl: u.profile_web_link ?? "",
+    verified: !!u.is_verified,
+    followers: u.follower_count ?? 0,
+    following: u.following_count ?? 0,
+    likes: u.likes_count ?? 0,
+    videos: u.video_count ?? 0,
+  };
+}
+
+export type TikTokVideo = {
+  id: string;
+  title: string;
+  cover: string;
+  url: string;
+  createdAt: number; // epoch seconds
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+};
+
+export async function listVideos(token: string, max = 20): Promise<TikTokVideo[]> {
+  const fields =
+    "id,title,cover_image_url,share_url,create_time,view_count,like_count,comment_count,share_count";
+  const res = await fetch(`${API}/video/list/?fields=${fields}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=UTF-8" },
+    body: JSON.stringify({ max_count: max }),
+  });
+  const data = await res.json();
+  return (data.data?.videos ?? []).map((v: Record<string, unknown>) => ({
+    id: String(v.id),
+    title: (v.title as string) ?? "",
+    cover: (v.cover_image_url as string) ?? "",
+    url: (v.share_url as string) ?? "",
+    createdAt: (v.create_time as number) ?? 0,
+    views: (v.view_count as number) ?? 0,
+    likes: (v.like_count as number) ?? 0,
+    comments: (v.comment_count as number) ?? 0,
+    shares: (v.share_count as number) ?? 0,
+  }));
+}
