@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
@@ -15,7 +16,25 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState("");
   const router = useRouter();
+
+  async function resetPassword() {
+    setError("");
+    setInfo("");
+    if (!email) {
+      setError("Enter your email above first, then tap Forgot password.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setInfo(
+        "If an account exists for that email, a reset link is on its way. Check spam too.",
+      );
+    } catch {
+      setError("Couldn't send the reset email. Please try again.");
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,6 +97,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
           className="w-full rounded-lg border border-stroke bg-ink px-4 py-2.5 text-sm outline-none focus:border-accent"
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
+        {info && <p className="text-sm text-accent">{info}</p>}
         <button
           type="submit"
           disabled={busy}
@@ -86,6 +106,15 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
           {busy ? "…" : mode === "signup" ? "Create account" : "Sign in"}
         </button>
       </form>
+      {mode === "login" && (
+        <button
+          type="button"
+          onClick={resetPassword}
+          className="mt-3 w-full text-center text-xs text-muted hover:text-accent"
+        >
+          Forgot password?
+        </button>
+      )}
       <p className="mt-5 text-center text-sm text-muted">
         {mode === "signup" ? (
           <>
