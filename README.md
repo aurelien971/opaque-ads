@@ -36,7 +36,7 @@ npm install && npm run dev
 
 ### 3. Scheduler clock
 - `CRON_SECRET` = any long random string.
-- `vercel.json` runs `/api/cron/publish` hourly (Vercel Hobby allows daily/hourly).
+- `vercel.json` runs `/api/cron/publish` once a day (Vercel Hobby only allows daily crons).
   For minute-precision, add a free job at cron-job.org: GET
   `https://www.oaisislabs.com/api/cron/publish` every 5 min with header
   `Authorization: Bearer <CRON_SECRET>`.
