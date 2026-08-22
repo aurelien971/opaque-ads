@@ -14,6 +14,7 @@ import { buildAuthUrl, tiktokClientKey, type TikTokConnection } from "@/lib/tikt
 import {
   autoSchedule,
   deletePost,
+  scheduleAt,
   unschedule,
   updatePost,
   uploadPost,
@@ -38,6 +39,18 @@ export default function Dashboard() {
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [time, setTime] = useState("18:00");
   const [perDay, setPerDay] = useState(1);
+  const [exact, setExact] = useState("");   // datetime-local, user's own time zone
+
+  async function quick(minutes: number) {
+    const n = await scheduleAt(drafts, new Date(Date.now() + minutes * 60_000));
+    setNotice(`${n} video${n === 1 ? "" : "s"} scheduled for ${new Date(Date.now() + minutes * 60_000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} (your time).`);
+  }
+  async function atExact() {
+    if (!exact) return;
+    const when = new Date(exact);
+    const n = await scheduleAt(drafts, when);
+    setNotice(`${n} video${n === 1 ? "" : "s"} scheduled for ${when.toLocaleString()}.`);
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -258,6 +271,36 @@ export default function Dashboard() {
             >
               Schedule {drafts.length} draft{drafts.length === 1 ? "" : "s"}
             </button>
+            <div className="mt-5 border-t border-stroke pt-4">
+              <p className="text-xs font-semibold text-muted">QUICK TEST — all drafts, your time zone</p>
+              <div className="mt-2 flex gap-2">
+                {[5, 15, 60].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => quick(m)}
+                    disabled={!drafts.length}
+                    className="flex-1 rounded-full border border-stroke py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40"
+                  >
+                    +{m < 60 ? `${m} min` : "1 h"}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="datetime-local"
+                  value={exact}
+                  onChange={(e) => setExact(e.target.value)}
+                  className="min-w-0 flex-1 rounded-lg border border-stroke bg-ink px-2 py-1.5 text-xs"
+                />
+                <button
+                  onClick={atExact}
+                  disabled={!drafts.length || !exact}
+                  className="rounded-full border border-stroke px-3 py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40"
+                >
+                  Set
+                </button>
+              </div>
+            </div>
             <button
               onClick={runNow}
               disabled={running}

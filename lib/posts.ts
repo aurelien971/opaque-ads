@@ -120,3 +120,16 @@ export async function autoSchedule(drafts: Post[], c: Cadence): Promise<number> 
   await batch.commit();
   return i;
 }
+
+// Schedules every draft starting at `when` (local time), `gapMinutes` apart.
+// The quick-test path: "+15 minutes" or an exact date/time.
+export async function scheduleAt(drafts: Post[], when: Date, gapMinutes = 2): Promise<number> {
+  if (!drafts.length) return 0;
+  const batch = writeBatch(db);
+  drafts.forEach((p, i) => {
+    const t = new Date(when.getTime() + i * gapMinutes * 60_000);
+    batch.update(doc(db, "posts", p.id), { status: "scheduled", dueAt: Timestamp.fromDate(t) });
+  });
+  await batch.commit();
+  return drafts.length;
+}
