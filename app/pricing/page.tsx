@@ -97,7 +97,7 @@ export default function Pricing() {
                 href="/signup"
                 className={`mt-8 block rounded-full py-2.5 text-center font-semibold transition ${
                   t.highlight
-                    ? "bg-accent text-ink hover:bg-deep hover:text-fg"
+                    ? "bg-fg text-white hover:bg-deep hover:text-white"
                     : "border border-stroke text-fg hover:border-accent"
                 }`}
               >

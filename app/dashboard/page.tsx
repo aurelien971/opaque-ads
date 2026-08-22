@@ -157,7 +157,7 @@ export default function Dashboard() {
             ) : (
               <button
                 onClick={connectTikTok}
-                className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-ink hover:bg-deep hover:text-fg"
+                className="rounded-full bg-fg px-5 py-2 text-sm font-semibold text-white hover:bg-deep hover:text-white"
               >
                 Connect TikTok
               </button>
@@ -189,7 +189,7 @@ export default function Dashboard() {
             <>
               <button
                 onClick={() => fileInput.current?.click()}
-                className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-ink hover:bg-deep hover:text-fg"
+                className="rounded-full bg-fg px-6 py-2.5 text-sm font-semibold text-white hover:bg-deep hover:text-white"
               >
                 Upload creatives
               </button>
@@ -254,7 +254,7 @@ export default function Dashboard() {
                                 "Connect your TikTok account first — then every draft gets a Publish button.",
                               )
                         }
-                        className="rounded-full bg-accent px-4 py-1 text-xs font-semibold text-ink hover:bg-deep hover:text-fg"
+                        className="rounded-full bg-fg px-4 py-1 text-xs font-semibold text-white hover:bg-deep hover:text-white"
                       >
                         Publish…
                       </button>

@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 export default function Nav() {
   const { user } = useAuth();
   return (
-    <header className="glass sticky top-0 z-40 border-x-0 border-t-0 border-b border-stroke/60">
+    <header className="glass sticky top-0 z-40 border-x-0 border-t-0 border-b border-stroke">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2">
           <span className="mercury-bg inline-block h-5 w-5 rounded-full border-2 border-ink ring-2 ring-accent/40" />

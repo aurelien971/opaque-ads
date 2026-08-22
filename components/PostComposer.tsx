@@ -208,7 +208,7 @@ export default function PostComposer({
         <button
           onClick={publish}
           disabled={!canPost}
-          className="mt-5 w-full rounded-full bg-accent py-2.5 font-semibold text-ink transition hover:bg-deep hover:text-fg disabled:opacity-40"
+          className="mt-5 w-full rounded-full bg-fg py-2.5 font-semibold text-white transition hover:bg-deep hover:text-white disabled:opacity-40"
         >
           {busy ? "Publishing…" : "Publish"}
         </button>
