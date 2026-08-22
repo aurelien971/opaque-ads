@@ -66,6 +66,18 @@ export default function Dashboard() {
     };
   }, [user]);
 
+  // Belt and braces for the free clock: if anything is overdue while the
+  // dashboard is open, fire the scheduler ourselves (once per overdue set).
+  const overdueKey = posts
+    .filter((p) => p.status === "scheduled" && (p.dueAt?.toMillis() ?? Infinity) <= Date.now())
+    .map((p) => p.id)
+    .join(",");
+  useEffect(() => {
+    if (!overdueKey || !connection || running) return;
+    runNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overdueKey]);
+
   if (loading || !user) {
     return <div className="flex min-h-screen items-center justify-center text-muted">Loading…</div>;
   }
