@@ -5,7 +5,6 @@
 // content declarations. Mirrors the compliant sheet from our desktop tooling.
 import { useEffect, useState } from "react";
 import { PRIVACY_LEVELS, type TikTokConnection } from "@/lib/tiktok";
-import type { Creative } from "@/lib/creatives";
 
 export default function PostComposer({
   creative,
@@ -13,7 +12,7 @@ export default function PostComposer({
   onClose,
   onPublish,
 }: {
-  creative: Creative;
+  creative: { id: string; caption: string };
   connection: TikTokConnection;
   onClose: () => void;
   onPublish: (opts: {
@@ -127,7 +126,7 @@ export default function PostComposer({
                 type="checkbox"
                 checked={val}
                 onChange={(e) => set(e.target.checked)}
-                className="accent-[#a3c2f0]"
+                className="accent-[#547dcc]"
               />
               {label}
             </label>
@@ -140,7 +139,7 @@ export default function PostComposer({
               type="checkbox"
               checked={commercial}
               onChange={(e) => setCommercial(e.target.checked)}
-              className="accent-[#a3c2f0]"
+              className="accent-[#547dcc]"
             />
             Disclose commercial content
           </label>
@@ -154,7 +153,7 @@ export default function PostComposer({
                   type="checkbox"
                   checked={yourBrand}
                   onChange={(e) => setYourBrand(e.target.checked)}
-                  className="accent-[#a3c2f0]"
+                  className="accent-[#547dcc]"
                 />
                 Your brand — promoting your own business
               </label>
@@ -163,7 +162,7 @@ export default function PostComposer({
                   type="checkbox"
                   checked={brandedContent}
                   onChange={(e) => setBrandedContent(e.target.checked)}
-                  className="accent-[#a3c2f0]"
+                  className="accent-[#547dcc]"
                 />
                 Branded content — paid partnership with another brand
               </label>

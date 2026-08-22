@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import Logo from "@/components/Logo";
 
 export default function Nav() {
   const { user } = useAuth();
@@ -8,12 +9,12 @@ export default function Nav() {
     <header className="glass sticky top-0 z-40 border-x-0 border-t-0 border-b border-stroke">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2">
-          <span className="mercury-bg inline-block h-5 w-5 rounded-full border-2 border-ink ring-2 ring-accent/40" />
-          <span className="mercury-text text-[17px] font-bold">Opaque Studio</span>
+          <Logo size={24} className="text-fg" />
+          <span className="text-[17px] font-bold tracking-tight">Opaque Studio</span>
         </Link>
         <div className="flex items-center gap-6 text-sm">
-          <Link href="/#features" className="hidden text-muted hover:text-fg sm:block">
-            Features
+          <Link href="/#how" className="hidden text-muted hover:text-fg sm:block">
+            How it works
           </Link>
           <Link href="/pricing" className="hidden text-muted hover:text-fg sm:block">
             Pricing

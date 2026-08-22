@@ -1,45 +1,50 @@
 # Opaque Studio
 
-Commercial SaaS platform: generate AI short-form ad creatives, manage a queue,
-and publish directly to TikTok accounts users connect themselves. Next.js 15 +
-Firebase (Auth / Firestore / Storage), deployed on Vercel.
+Schedule your TikTok videos; they post themselves. Next.js 15 + Firebase
+(Auth / Firestore / Storage) + TikTok Content Posting API, on Vercel.
 
-## Local dev
+**Flow:** sign up → connect TikTok → bulk-upload videos → set posting days +
+hour → the calendar fills → the scheduler publishes each video when due →
+results (views/likes/comments/shares) come back into the dashboard.
 
+## Run locally
 ```bash
-npm install
-npm run dev
+cp .env.example .env.local   # fill it in
+npm install && npm run dev
 ```
 
-## Environment (Vercel → Project → Settings → Environment Variables)
+## Setup checklist (everything the app needs to go live)
 
-| Var | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_TIKTOK_CLIENT_KEY` | TikTok app client key (public, appears in OAuth URL) |
-| `TIKTOK_CLIENT_SECRET` | TikTok app client secret (server only — never commit) |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Optional: Web App id from Firebase console |
+### 1. Firebase — a NEW project just for this platform
+1. console.firebase.google.com → Add project (e.g. `opaque-studio`).
+2. **Authentication → Sign-in method → Email/Password → Enable.**
+3. **Firestore Database → Create** (production mode, any region) → Rules tab →
+   paste `firestore.rules` → Publish.
+4. **Storage → Get started** → Rules tab → paste `storage.rules` → Publish.
+5. **Project settings → General → Your apps → Add app → Web** (no hosting) →
+   copy the `firebaseConfig` values into the six `NEXT_PUBLIC_FIREBASE_*` vars.
+6. **Project settings → Service accounts → Generate new private key** → paste
+   the JSON (single line) as `FIREBASE_SERVICE_ACCOUNT`.
 
-Firebase project config defaults are baked into `lib/firebase.ts`
-(project `opaque-3964b`); web API keys are public by design.
+### 2. TikTok — developers.tiktok.com → your app
+- Redirect URI: `https://www.oaisislabs.com/auth/tiktok/callback`
+- Scopes: `user.info.basic`, `video.upload`, `video.publish`, `video.list`
+- Copy Client key → `NEXT_PUBLIC_TIKTOK_CLIENT_KEY`, Client secret →
+  `TIKTOK_CLIENT_SECRET`. Keep `TIKTOK_POST_MODE=inbox` until the app is
+  audited (unaudited apps can only deliver to the user's TikTok inbox/drafts).
+- Add test users (Sandbox → Target users) for any TikTok account you'll test with.
 
-## Launch checklist
+### 3. Scheduler clock
+- `CRON_SECRET` = any long random string.
+- `vercel.json` runs `/api/cron/publish` hourly (Vercel Hobby allows daily/hourly).
+  For minute-precision, add a free job at cron-job.org: GET
+  `https://www.oaisislabs.com/api/cron/publish` every 5 min with header
+  `Authorization: Bearer <CRON_SECRET>`.
 
-1. **Firebase console**: enable Email/Password under Authentication →
-   Sign-in method. Paste `firestore.rules` and `storage.rules` into their
-   consoles. Add a Web App (Project settings → Add app → Web) and set
-   `NEXT_PUBLIC_FIREBASE_APP_ID`.
-2. **Vercel**: `vercel login`, then `vercel --prod`. Add the env vars above.
-3. **TikTok developer portal**: add https://www.oaisislabs.com as a verified URL
-   property (`public/tiktokAGLUlSoHS17HgfsFqZBgNiqR7yVkjm6x.txt` is served at
-   the site root; replace with the new file if TikTok issues a new code).
-   Set the redirect URI to `https://www.oaisislabs.com/auth/tiktok/callback`.
-   Terms: `/terms` · Privacy: `/privacy`.
-4. **Firebase Hosting (old site)**: replace with a redirect to the new domain.
+### 4. Vercel
+Settings → Environment Variables → add everything from `.env.example` →
+Redeploy. Every `git push` deploys.
 
-## TikTok compliance notes
-
-The publish sheet (`components/PostComposer.tsx`) implements the Content
-Posting API UX requirements: creator identity display, manual privacy
-selection (no default), interaction toggles, commercial content disclosure
-(Your brand / Branded content, branded content can't be private), and the
-Music Usage Confirmation / Branded Content Policy declarations.
+## Data model
+`users/{uid}` — `{ email, tiktok: { openId, displayName, accessToken, refreshToken, expiresAt, scope } }`
+`posts/{id}` — `{ uid, name, caption, videoUrl, storagePath, status: draft|scheduled|posted|failed, dueAt, privacy, publishId, postedAt, mode, tiktokVideoId, stats }`

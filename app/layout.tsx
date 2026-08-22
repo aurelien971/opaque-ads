@@ -7,10 +7,10 @@ const serif = Instrument_Serif({ weight: "400", style: "italic", subsets: ["lati
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.oaisislabs.com"),
-  title: "Opaque Studio — AI creatives, published to TikTok",
+  title: "Opaque Studio — Schedule your TikTok videos. They post themselves.",
   description:
-    "Generate scroll-stopping before/after video creatives with AI, add music, and publish them straight to your TikTok account. The creative engine built to grow Opaque, open to every marketer.",
-  icons: { icon: "/app-icon.png" },
+    "Upload your videos in bulk, set a posting calendar, and Opaque Studio publishes them to your TikTok account on schedule — then shows you how each one performed.",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({

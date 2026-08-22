@@ -1,11 +1,10 @@
 rules_version = '2';
-// Paste into Firebase console → Storage → Rules (merge with existing rules).
+// Beta rules — signed-in users write, anyone can read (TikTok fetches the file).
 service firebase.storage {
   match /b/{bucket}/o {
-    match /users/{uid}/{allPaths=**} {
-      allow read: if true;  // TikTok pulls the video from its public URL
-      allow write: if request.auth != null && request.auth.uid == uid
-                   && request.resource.size < 300 * 1024 * 1024;
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.resource.size < 200 * 1024 * 1024;
     }
   }
 }

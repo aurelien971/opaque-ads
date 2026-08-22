@@ -15,15 +15,15 @@ export default function Privacy() {
         {[
           [
             "What we collect",
-            "Account data: your email address and authentication credentials (managed by Firebase Authentication). Content you provide: photos you upload, creatives you generate, captions, and audio files. TikTok connection data: when you connect a TikTok account we receive, via TikTok's official API and with your explicit consent, your TikTok open ID, display name, avatar, and access tokens scoped to the permissions you approved (basic profile, video upload, video publish). Usage data: standard logs (IP address, browser type, pages visited) for security and debugging.",
+            "Account data: your email address and authentication credentials (managed by Firebase Authentication). Content you provide: the videos you upload and their captions. TikTok connection data: when you connect a TikTok account we receive, via TikTok's official API and with your explicit consent, your TikTok open ID, display name, avatar, and access tokens scoped to the permissions you approved (basic profile, video upload, video publish, and reading the performance of videos you published through us). Usage data: standard logs (IP address, browser type, pages visited) for security and debugging.",
           ],
           [
             "What we use it for",
-            "To operate the Service: rendering your creatives, storing your queue, and publishing content to your TikTok account when you request it. Access tokens are used exclusively to perform the actions you initiate — checking creator info before a post, uploading, and publishing. We do not read your TikTok inbox, followers, or any data beyond the scopes you approved.",
+            "To operate the Service: storing your queue, publishing content to your TikTok account at the times you scheduled, and reading view, like, comment, and share counts for the videos we published so we can show you how they did. Access tokens are used exclusively for these actions. We do not read your TikTok inbox, followers, or any data beyond the scopes you approved.",
           ],
           [
             "What we never do",
-            "We do not sell your data. We do not share your data with advertisers. We do not post to your accounts without an explicit instruction from you. We do not use your photos or creatives to train models or for any purpose other than providing the Service to you.",
+            "We do not sell your data. We do not share your data with advertisers. We do not post to your accounts without an explicit instruction from you. We do not use your videos for any purpose other than providing the Service to you.",
           ],
           [
             "Where your data lives",
@@ -31,11 +31,11 @@ export default function Privacy() {
           ],
           [
             "Retention and deletion",
-            "Your data is retained while your account is active. Deleting a creative removes its files from storage. Disconnecting TikTok deletes the associated tokens immediately. Deleting your account removes your account data, content, and tokens within 30 days — see our Data Deletion page for the exact steps. You may also revoke Opaque Studio's access directly in TikTok's app settings at any time.",
+            "Your data is retained while your account is active. Deleting a video removes its file from storage. Disconnecting TikTok deletes the associated tokens immediately. Deleting your account removes your account data, content, and tokens within 30 days — see our Data Deletion page for the exact steps. You may also revoke Opaque Studio's access directly in TikTok's app settings at any time.",
           ],
           [
             "Third-party services",
-            "Firebase / Google Cloud (infrastructure and authentication), TikTok (publishing, under your consent), and AI inference providers used solely to process the images you submit for generation. Each processes data only as needed to provide their function.",
+            "Firebase / Google Cloud (infrastructure and authentication), TikTok (publishing, under your consent). Each processes data only as needed to provide their function.",
           ],
           [
             "Your rights",

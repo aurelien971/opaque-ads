@@ -1,72 +1,26 @@
-// Publishes a queued video to the user's TikTok account via the official
-// Content Posting API (direct post, PULL_FROM_URL). The video URL is the
-// user's own Firebase Storage file; TikTok fetches it directly.
+// Publish one post right now (the dashboard's publish sheet). Auth'd by the
+// user's Firebase ID token; the post must belong to them.
 import { NextResponse } from "next/server";
+import { adminDb } from "@/lib/admin";
+import { uidFromRequest } from "@/lib/server-auth";
+import { publishPost } from "@/lib/scheduler";
+import { tiktokConfigured } from "@/lib/tiktok-server";
+
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const {
-    accessToken,
-    videoUrl,
-    caption,
-    privacy,
-    allowComments,
-    allowDuet,
-    allowStitch,
-    commercial,
-    yourBrand,
-    brandedContent,
-  } = await req.json();
-
-  if (!accessToken || !videoUrl || !privacy) {
-    return NextResponse.json(
-      { error: "Missing token, video, or privacy level." },
-      { status: 400 },
-    );
+  if (!tiktokConfigured()) {
+    return NextResponse.json({ error: "TikTok keys are not configured yet." }, { status: 503 });
   }
-
-  const body = {
-    post_info: {
-      title: caption ?? "",
-      privacy_level: privacy,
-      disable_comment: !allowComments,
-      disable_duet: !allowDuet,
-      disable_stitch: !allowStitch,
-      ...(commercial
-        ? {
-            brand_content_toggle: !!brandedContent,
-            brand_organic_toggle: !!yourBrand,
-          }
-        : {}),
-    },
-    source_info: {
-      source: "PULL_FROM_URL",
-      video_url: videoUrl,
-    },
-  };
-
-  const res = await fetch(
-    "https://open.tiktokapis.com/v2/post/publish/video/init/",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json; charset=UTF-8",
-      },
-      body: JSON.stringify(body),
-    },
-  );
-  const data = await res.json();
-  const errCode = data.error?.code;
-  if (!res.ok || (errCode && errCode !== "ok")) {
-    return NextResponse.json(
-      {
-        error:
-          data.error?.message ??
-          "TikTok did not accept the post. If our platform access is still in review, publishing activates on approval.",
-      },
-      { status: 502 },
-    );
+  const uid = await uidFromRequest(req);
+  if (!uid) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const { postId, ...opts } = await req.json();
+  const snap = await adminDb().doc(`posts/${postId}`).get();
+  if (snap.data()?.uid !== uid) return NextResponse.json({ error: "Not your post." }, { status: 403 });
+  try {
+    const publishId = await publishPost(postId, opts);
+    return NextResponse.json({ publishId });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Publish failed." }, { status: 502 });
   }
-
-  return NextResponse.json({ publishId: data.data?.publish_id ?? "" });
 }

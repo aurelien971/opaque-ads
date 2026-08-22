@@ -2,7 +2,7 @@
 // The client key is public (it appears in the OAuth URL); the client secret
 // lives ONLY in server env (TIKTOK_CLIENT_SECRET on Vercel), never in code.
 
-export const TIKTOK_SCOPES = "user.info.basic,video.upload,video.publish";
+export const TIKTOK_SCOPES = "user.info.basic,video.upload,video.publish,video.list";
 
 export const tiktokClientKey = () =>
   process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY ?? "";
