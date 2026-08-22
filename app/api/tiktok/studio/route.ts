@@ -1,18 +1,12 @@
-// The signed-in user's TikTok studio: profile + stats + their videos.
 import { NextResponse } from "next/server";
-import { uidFromRequest } from "@/lib/server-auth";
-import { connectionFor } from "@/lib/scheduler";
-import { listVideos, userProfile } from "@/lib/tiktok-server";
 
 export async function POST(req: Request) {
-  let uid: string | null;
   try {
-    uid = await uidFromRequest(req);
-  } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Server misconfigured." }, { status: 500 });
-  }
-  if (!uid) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
-  try {
+    const [{ uidFromRequest }, { connectionFor }, { listVideos, userProfile }] = await Promise.all([
+      import("@/lib/server-auth"), import("@/lib/scheduler"), import("@/lib/tiktok-server"),
+    ]);
+    const uid = await uidFromRequest(req);
+    if (!uid) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
     const conn = await connectionFor(uid);
     if (!conn) return NextResponse.json({ error: "TikTok not connected." }, { status: 400 });
     const [profile, videos] = await Promise.all([
@@ -21,6 +15,6 @@ export async function POST(req: Request) {
     ]);
     return NextResponse.json({ profile, videos });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Studio failed." }, { status: 502 });
+    return NextResponse.json({ error: e instanceof Error ? `${e.message}` : String(e) }, { status: 500 });
   }
 }
