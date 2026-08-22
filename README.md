@@ -24,7 +24,7 @@ npm install && npm run dev
 5. **Project settings → General → Your apps → Add app → Web** (no hosting) →
    copy the `firebaseConfig` values into the six `NEXT_PUBLIC_FIREBASE_*` vars.
 6. **Project settings → Service accounts → Generate new private key** → paste
-   the JSON (single line) as `FIREBASE_SERVICE_ACCOUNT`.
+   the JSON (single line) as `FIREBASE_SERVICE_ACCOUNT_B64` (the JSON file base64-encoded: `base64 -i key.json | tr -d "\n"`).
 
 ### 2. TikTok — developers.tiktok.com → your app
 - Redirect URI: `https://www.oaisislabs.com/auth/tiktok/callback`

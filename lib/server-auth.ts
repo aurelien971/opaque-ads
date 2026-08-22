@@ -7,7 +7,9 @@ export async function uidFromRequest(req: Request): Promise<string | null> {
   if (!token) return null;
   try {
     return (await adminAuth().verifyIdToken(token)).uid;
-  } catch {
+  } catch (e) {
+    // Server misconfiguration must surface as a readable error, not a crash.
+    if (e instanceof Error && e.message.includes("FIREBASE_SERVICE_ACCOUNT")) throw e;
     return null;
   }
 }

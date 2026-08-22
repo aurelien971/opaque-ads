@@ -12,7 +12,12 @@ export async function POST(req: Request) {
   if (!tiktokConfigured()) {
     return NextResponse.json({ error: "TikTok keys are not configured yet." }, { status: 503 });
   }
-  const uid = await uidFromRequest(req);
+  let uid: string | null;
+  try {
+    uid = await uidFromRequest(req);
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Server misconfigured." }, { status: 500 });
+  }
   if (!uid) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const { postId, ...opts } = await req.json();
   const snap = await adminDb().doc(`posts/${postId}`).get();

@@ -5,7 +5,12 @@ import { connectionFor } from "@/lib/scheduler";
 import { listVideos, userProfile } from "@/lib/tiktok-server";
 
 export async function POST(req: Request) {
-  const uid = await uidFromRequest(req);
+  let uid: string | null;
+  try {
+    uid = await uidFromRequest(req);
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Server misconfigured." }, { status: 500 });
+  }
   if (!uid) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   try {
     const conn = await connectionFor(uid);
