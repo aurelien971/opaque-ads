@@ -7,7 +7,7 @@ import type { TikTokProfile, TikTokVideo } from "@/lib/tiktok-server";
 const n = (v: number) =>
   v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(1)}K` : String(v);
 
-export default function Studio({ getToken }: { getToken: () => Promise<string> }) {
+export default function Studio({ getToken, onVideos }: { getToken: () => Promise<string>; onVideos?: (v: TikTokVideo[]) => void }) {
   const [profile, setProfile] = useState<TikTokProfile | null>(null);
   const [videos, setVideos] = useState<TikTokVideo[]>([]);
   const [error, setError] = useState("");
@@ -25,6 +25,7 @@ export default function Studio({ getToken }: { getToken: () => Promise<string> }
       if (!res.ok) throw new Error(data.error);
       setProfile(data.profile);
       setVideos(data.videos);
+      onVideos?.(data.videos);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load your studio.");
     } finally {

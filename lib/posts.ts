@@ -35,6 +35,8 @@ export type Post = {
   brandedContent?: boolean;
   dueAt?: Timestamp | null;
   postedAt?: Timestamp;
+  deliveredAt?: Timestamp;
+  processing?: string;
   createdAt?: Timestamp;
   mode?: "inbox" | "direct";
   error?: string;
@@ -139,4 +141,30 @@ export async function scheduleAt(drafts: Post[], when: Date, gapMinutes = 2): Pr
   });
   await batch.commit();
   return drafts.length;
+}
+
+// Smart schedule: lays drafts onto the account's best slots (day + hour),
+// walking forward from tomorrow, one draft per slot occurrence.
+export async function smartSchedule(drafts: Post[], slots: { day: number; hour: number }[]): Promise<Date[]> {
+  if (!drafts.length || !slots.length) return [];
+  const batch = writeBatch(db);
+  const times: Date[] = [];
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  let i = 0;
+  let guard = 0;
+  while (i < drafts.length && guard++ < 400) {
+    for (const s of slots.filter((s) => s.day === cursor.getDay()).sort((a, b) => a.hour - b.hour)) {
+      if (i >= drafts.length) break;
+      const when = new Date(cursor);
+      when.setHours(s.hour, 0, 0, 0);
+      if (when.getTime() < Date.now() + 10 * 60_000) continue;
+      batch.update(doc(db, "posts", drafts[i].id), { status: "scheduled", dueAt: Timestamp.fromDate(when) });
+      times.push(when);
+      i++;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  await batch.commit();
+  return times;
 }

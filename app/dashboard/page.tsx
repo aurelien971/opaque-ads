@@ -9,12 +9,16 @@ import Footer from "@/components/Footer";
 import PostComposer from "@/components/PostComposer";
 import PostEditor from "@/components/PostEditor";
 import Studio from "@/components/Studio";
+import Link from "next/link";
+import { bestSlots, describeSlots } from "@/lib/analytics";
+import type { TikTokVideo } from "@/lib/tiktok-server";
 import { auth, db, firebaseConfigured } from "@/lib/firebase";
 import { useRequireAuth } from "@/lib/auth";
 import { buildAuthUrl, tiktokClientKey, type TikTokConnection } from "@/lib/tiktok";
 import {
   autoSchedule,
   scheduleAt,
+  smartSchedule,
   unschedule,
   updatePost,
   uploadPost,
@@ -42,6 +46,16 @@ export default function Dashboard() {
   const [time, setTime] = useState("18:00");
   const [perDay, setPerDay] = useState(1);
   const [exact, setExact] = useState("");   // datetime-local, user's own time zone
+  const [videos, setVideos] = useState<TikTokVideo[]>([]);   // lifted from Studio for smart slots
+  const [more, setMore] = useState(false);
+
+  async function smart() {
+    const { slots, basis } = bestSlots(videos);
+    const times = await smartSchedule(drafts, slots);
+    setNotice(
+      `${times.length} video${times.length === 1 ? "" : "s"} scheduled on your best slots — ${describeSlots(slots)} (${basis === "history" ? "based on your account's history" : "TikTok defaults until you have more history"}). First one ${times[0]?.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) ?? ""}.`,
+    );
+  }
 
   async function quick(minutes: number) {
     const n = await scheduleAt(drafts, new Date(Date.now() + minutes * 60_000));
@@ -152,6 +166,7 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Your studio</h1>
           <div className="flex items-center gap-4 text-sm text-muted">
+            {connection && <Link href="/dashboard/analytics" className="font-semibold text-accent hover:underline">Analytics →</Link>}
             <span>{user.email}</span>
             <button onClick={() => signOut(auth)} className="hover:text-fg">Sign out</button>
           </div>
@@ -198,7 +213,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {connection && <Studio getToken={() => user.getIdToken()} />}
+        {connection && <Studio getToken={() => user.getIdToken()} onVideos={setVideos} />}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
           {/* 2 · Upload */}
@@ -255,76 +270,65 @@ export default function Dashboard() {
           {/* 3 · Schedule */}
           <section className="rounded-2xl border border-stroke bg-surface p-6">
             <p className="text-xs font-bold tracking-widest text-accent">STEP 3</p>
-            <h2 className="mt-1 font-semibold">Posting schedule</h2>
-            <p className="mt-1 text-sm text-muted">Pick the days and time. Drafts fill the calendar in order.</p>
-            <div className="mt-4 flex gap-1.5">
-              {DAY_LABELS.map((l, i) => (
-                <button
-                  key={i}
-                  onClick={() => setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i]))}
-                  className={`h-9 w-9 rounded-full text-sm font-semibold transition ${
-                    days.includes(i) ? "bg-fg text-white" : "bg-ink text-muted hover:text-fg"
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center gap-3 text-sm">
-              <label className="text-muted">At</label>
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="rounded-lg border border-stroke bg-ink px-3 py-1.5" />
-              <label className="text-muted">Per day</label>
-              <select value={perDay} onChange={(e) => setPerDay(Number(e.target.value))} className="rounded-lg border border-stroke bg-ink px-3 py-1.5">
-                {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
+            <h2 className="mt-1 font-semibold">Schedule</h2>
+            <p className="mt-1 text-sm text-muted">
+              {drafts.length === 0
+                ? "Upload videos first — then one click puts them on the calendar."
+                : `${drafts.length} draft${drafts.length === 1 ? "" : "s"} waiting.`}
+            </p>
+
             <button
-              onClick={scheduleAll}
-              disabled={!drafts.length || !days.length}
-              className="glass-bright mt-5 w-full rounded-full py-2.5 text-sm font-semibold disabled:opacity-40"
+              onClick={smart}
+              disabled={!drafts.length}
+              className="glass-bright mt-5 w-full rounded-full py-3 text-sm font-semibold disabled:opacity-40"
             >
-              Schedule {drafts.length} draft{drafts.length === 1 ? "" : "s"}
-            </button>
-            <div className="mt-5 border-t border-stroke pt-4">
-              <p className="text-xs font-semibold text-muted">QUICK TEST — all drafts, your time zone</p>
-              <div className="mt-2 flex gap-2">
-                {[5, 15, 60].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => quick(m)}
-                    disabled={!drafts.length}
-                    className="flex-1 rounded-full border border-stroke py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40"
-                  >
-                    +{m < 60 ? `${m} min` : "1 h"}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-2 flex gap-2">
-                <input
-                  type="datetime-local"
-                  value={exact}
-                  onChange={(e) => setExact(e.target.value)}
-                  className="min-w-0 flex-1 rounded-lg border border-stroke bg-ink px-2 py-1.5 text-xs"
-                />
-                <button
-                  onClick={atExact}
-                  disabled={!drafts.length || !exact}
-                  className="rounded-full border border-stroke px-3 py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40"
-                >
-                  Set
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={runNow}
-              disabled={running}
-              className="mt-3 w-full rounded-full border border-stroke py-2 text-xs font-semibold text-muted hover:border-accent hover:text-fg disabled:opacity-40"
-            >
-              {running ? "Running…" : "Run scheduler now (test)"}
+              ✦ Smart schedule {drafts.length ? `${drafts.length} video${drafts.length === 1 ? "" : "s"}` : ""}
             </button>
             <p className="mt-2 text-[11px] leading-snug text-muted">
-              The scheduler runs automatically every few minutes. &ldquo;Run now&rdquo; posts anything already due and refreshes results.
+              Picks the days and hours that perform best on <em>your</em> account ({describeSlots(bestSlots(videos).slots)}) and spreads the drafts across them.
             </p>
+
+            <button onClick={() => setMore(!more)} className="mt-4 text-xs font-semibold text-accent hover:underline">
+              {more ? "Hide options" : "Pick my own time or cadence"}
+            </button>
+
+            {more && (
+              <div className="mt-3 space-y-4 border-t border-stroke pt-4">
+                <div>
+                  <p className="text-xs font-semibold text-muted">AT AN EXACT TIME (your time zone)</p>
+                  <div className="mt-2 flex gap-2">
+                    <input type="datetime-local" value={exact} onChange={(e) => setExact(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-stroke bg-ink px-2 py-1.5 text-xs" />
+                    <button onClick={atExact} disabled={!drafts.length || !exact} className="rounded-full border border-stroke px-3 py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40">Set</button>
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    {[5, 15, 60].map((m) => (
+                      <button key={m} onClick={() => quick(m)} disabled={!drafts.length} className="flex-1 rounded-full border border-stroke py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40">
+                        in {m < 60 ? `${m} min` : "1 h"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted">REPEATING CADENCE</p>
+                  <div className="mt-2 flex gap-1.5">
+                    {DAY_LABELS.map((l, i) => (
+                      <button key={i} onClick={() => setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i]))} className={`h-8 w-8 rounded-full text-xs font-semibold transition ${days.includes(i) ? "bg-fg text-white" : "bg-ink text-muted hover:text-fg"}`}>{l}</button>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    <span className="text-muted">at</span>
+                    <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="rounded-lg border border-stroke bg-ink px-2 py-1" />
+                    <select value={perDay} onChange={(e) => setPerDay(Number(e.target.value))} className="rounded-lg border border-stroke bg-ink px-2 py-1">
+                      {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} / day</option>)}
+                    </select>
+                    <button onClick={scheduleAll} disabled={!drafts.length || !days.length} className="ml-auto rounded-full border border-stroke px-3 py-1 font-semibold hover:border-accent disabled:opacity-40">Apply</button>
+                  </div>
+                </div>
+                <button onClick={runNow} disabled={running} className="w-full rounded-full border border-stroke py-1.5 text-xs font-semibold text-muted hover:border-accent hover:text-fg disabled:opacity-40">
+                  {running ? "Running…" : "Run scheduler now"}
+                </button>
+              </div>
+            )}
           </section>
         </div>
 
@@ -391,9 +395,16 @@ export default function Dashboard() {
                         {p.status === "failed" ? (
                           <span className="text-red-500" title={p.error}>Failed — {p.error}</span>
                         ) : (
-                          <span className="text-green-600">
-                            {p.mode === "inbox" ? "In TikTok inbox" : "Posted"}
-                            {p.postedAt ? ` · ${p.postedAt.toDate().toLocaleDateString()}` : ""}
+                          <span className="block text-green-600">
+                            {p.mode === "inbox" ? "Sent to TikTok inbox" : "Posted"}
+                            {p.postedAt ? ` · ${p.postedAt.toDate().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}` : ""}
+                            <span className="block text-[11px] text-muted">
+                              {p.deliveredAt
+                                ? `Delivered ${p.deliveredAt.toDate().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}`
+                                : p.processing
+                                  ? `TikTok: ${p.processing.toLowerCase().replace(/_/g, " ")}`
+                                  : "Awaiting TikTok confirmation…"}
+                            </span>
                           </span>
                         )}
                       </td>

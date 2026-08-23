@@ -9,6 +9,8 @@ import {
   publishStatus,
   publishVideo,
   videoStats,
+  userProfile,
+  listVideos,
   type PostOptions,
   type StoredConnection,
   type VideoStats,
@@ -89,6 +91,32 @@ export async function runScheduler(uid?: string): Promise<RunReport> {
     }
   }
 
+  // Daily account snapshot (followers, likes, views) for the analytics trends.
+  const today = new Date().toISOString().slice(0, 10);
+  const userIds = uid
+    ? [uid]
+    : (await db.collection("users").get()).docs.filter((d) => d.data().tiktok?.accessToken).map((d) => d.id);
+  for (const u of userIds) {
+    const snapRef = db.doc(`users/${u}/snapshots/${today}`);
+    if ((await snapRef.get()).exists) continue;
+    const conn = await connectionFor(u).catch(() => null);
+    if (!conn) continue;
+    try {
+      const [profile, videos] = await Promise.all([userProfile(conn.accessToken), listVideos(conn.accessToken).catch(() => [])]);
+      await snapRef.set({
+        date: today,
+        at: Timestamp.now(),
+        followers: profile.followers,
+        following: profile.following,
+        likes: profile.likes,
+        videos: profile.videos,
+        totalViews: videos.reduce((a, v) => a + v.views, 0),
+      });
+    } catch {
+      /* next run */
+    }
+  }
+
   // Feedback: resolve processing → public post ids, then refresh stats.
   let pq = db.collection("posts").where("status", "==", "posted");
   if (uid) pq = pq.where("uid", "==", uid);
@@ -104,12 +132,18 @@ export async function runScheduler(uid?: string): Promise<RunReport> {
     const ids: string[] = [];
     for (const d of docs) {
       const p = d.data();
-      if (!p.tiktokVideoId && p.publishId && p.mode === "direct") {
+      // Delivery: ask TikTok what happened to the upload (inbox AND direct).
+      if (p.publishId && !p.deliveredAt && !p.deliveryFailed) {
         try {
           const st = await publishStatus(conn.accessToken, p.publishId);
           const vid = st.publicaly_available_post_id?.[0];
-          if (vid) await d.ref.update({ tiktokVideoId: String(vid), processing: st.status });
-          else await d.ref.update({ processing: st.status, ...(st.fail_reason ? { error: st.fail_reason } : {}) });
+          const delivered = st.status === "SEND_TO_USER_INBOX" || st.status === "PUBLISH_COMPLETE";
+          await d.ref.update({
+            processing: st.status,
+            ...(delivered ? { deliveredAt: Timestamp.now() } : {}),
+            ...(vid ? { tiktokVideoId: String(vid) } : {}),
+            ...(st.status === "FAILED" ? { deliveryFailed: true, error: st.fail_reason ?? "TikTok rejected the upload." } : {}),
+          });
           if (vid) ids.push(String(vid));
         } catch {
           /* next run */
