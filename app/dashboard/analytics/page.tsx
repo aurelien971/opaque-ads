@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
-import Nav from "@/components/Nav";
+import ConsoleNav from "@/components/ConsoleNav";
 import Footer from "@/components/Footer";
 import { db } from "@/lib/firebase";
 import { useRequireAuth } from "@/lib/auth";
@@ -60,14 +60,14 @@ export default function Analytics() {
 
   return (
     <>
-      <Nav />
+      <ConsoleNav />
       <main className="mx-auto min-h-[80vh] max-w-6xl px-5 py-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <Link href="/dashboard" className="text-xs text-muted hover:text-fg">← Studio</Link>
-            <h1 className="text-2xl font-bold tracking-tight">Analytics {profile ? <span className="text-muted">· @{profile.displayName}</span> : null}</h1>
+            <p className="mono">Analytics{profile ? ` · @${profile.displayName}` : ""}</p>
+            <h1 className="serif mt-2 text-[30px] leading-[1.1] md:text-[36px]">What your account responds to.</h1>
           </div>
-          <p className="text-xs text-muted">Live from TikTok · snapshots taken daily</p>
+          <p className="text-xs text-faint">Live from TikTok · snapshots daily</p>
         </div>
         {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
 

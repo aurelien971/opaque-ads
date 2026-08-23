@@ -60,25 +60,41 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
     e.preventDefault();
     setError("");
     setBusy(true);
+    const ensureDoc = (uid: string) =>
+      setDoc(doc(db, "users", uid), { email, createdAt: serverTimestamp(), plan: "free" }, { merge: true });
     try {
       if (mode === "signup") {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(
-          doc(db, "users", cred.user.uid),
-          { email, createdAt: serverTimestamp(), plan: "free" },
-          { merge: true },
-        );
+        try {
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
+          await ensureDoc(cred.user.uid);
+        } catch (err: unknown) {
+          // Account already exists? If the password matches, just sign them in.
+          if (String(err).includes("email-already-in-use")) {
+            await signInWithEmailAndPassword(auth, email, password);
+            setInfo("You already had an account — signed you in.");
+          } else throw err;
+        }
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (err: unknown) {
+          // No account yet? Create it with these credentials, no second form.
+          const c = String(err);
+          if (c.includes("user-not-found")) {
+            const cred = await createUserWithEmailAndPassword(auth, email, password);
+            await ensureDoc(cred.user.uid);
+            setInfo("No account existed for that email — created one for you.");
+          } else throw err;
+        }
       }
       router.push("/dashboard");
     } catch (err: unknown) {
       const code = err instanceof Error ? err.message : String(err);
       setError(
         code.includes("invalid-credential") || code.includes("wrong-password")
-          ? "Wrong email or password."
+          ? "That password doesn't match this email. If you're new, pick a different email — or use Forgot password."
           : code.includes("email-already-in-use")
-            ? "An account with this email already exists — sign in instead."
+            ? "This email already has an account with a different password."
             : code.includes("weak-password")
               ? "Password must be at least 6 characters."
               : "Something went wrong. Please try again.",

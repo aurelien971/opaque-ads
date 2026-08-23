@@ -20,7 +20,7 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
   font-weight: 400;
-  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 .serif { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.02em; }
 .mono { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-faint); }
@@ -35,7 +35,7 @@ body {
 .pill-primary:hover { transform: translateY(-1px); box-shadow: 0 22px 44px -18px rgba(22,21,15,0.9); }
 .pill-secondary { border: 1px solid rgba(22,21,15,0.18); border-radius: 999px; transition: border-color 200ms ease; }
 .pill-secondary:hover { border-color: rgba(22,21,15,0.4); }
-.tilt { transition: transform 400ms cubic-bezier(0.2,0.7,0.2,1); }
+.tilt { transition: transform 400ms cubic-bezier(0.2,0.7,0.2,1); backface-visibility: hidden; }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .tilt:hover { transform: rotateY(0deg) rotateX(0deg) !important; }
 }

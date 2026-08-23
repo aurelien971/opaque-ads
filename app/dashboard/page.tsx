@@ -3,9 +3,8 @@
 // what went out, how it did — with the account and the controls on the right.
 // Not connected yet? One focused panel, nothing else.
 import { useEffect, useRef, useState } from "react";
-import { signOut } from "firebase/auth";
 import { deleteField, doc, onSnapshot, updateDoc } from "firebase/firestore";
-import Nav from "@/components/Nav";
+import ConsoleNav from "@/components/ConsoleNav";
 import Footer from "@/components/Footer";
 import PostComposer from "@/components/PostComposer";
 import PostEditor from "@/components/PostEditor";
@@ -13,7 +12,7 @@ import AccountCard from "@/components/AccountCard";
 import OrbitMark from "@/components/OrbitMark";
 import { bestSlots, describeSlots, fmtN } from "@/lib/analytics";
 import type { TikTokVideo } from "@/lib/tiktok-server";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { useRequireAuth } from "@/lib/auth";
 import { buildAuthUrl, tiktokClientKey, type TikTokConnection } from "@/lib/tiktok";
 import { autoSchedule, scheduleAt, smartSchedule, uploadPost, watchPosts, type Post } from "@/lib/posts";
@@ -137,17 +136,13 @@ export default function Dashboard() {
 
   return (
     <>
-      <Nav />
+      <ConsoleNav />
       <main className="mx-auto min-h-[80vh] max-w-[1080px] px-6 pb-[90px] pt-6 md:px-12">
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="mono">{greeting}</p>
             <h1 className="serif mt-2 max-w-[640px] text-[30px] leading-[1.1] md:text-[36px]">{headline}</h1>
-          </div>
-          <div className="flex items-center gap-4 text-[13px] text-faint">
-            <span>{user.email}</span>
-            <button onClick={() => signOut(auth)} className="hover:text-fg">Sign out</button>
           </div>
         </div>
 
@@ -177,7 +172,7 @@ export default function Dashboard() {
             {/* ================= Main ================= */}
             <div className="min-w-0 space-y-10">
               {/* Stat strip */}
-              <div className="grid gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {[
                   ["Up next", String(scheduled.length), scheduled[0] ? hm(scheduled[0].dueAt?.toDate()) + (byDay["Today"] ? " today" : "") : "nothing queued"],
                   ["Posted this month", String(postedThisMonth), "through OAISIS"],
@@ -186,8 +181,8 @@ export default function Dashboard() {
                 ].map(([l, v, s]) => (
                   <div key={l} className={`${card} p-4`}>
                     <p className="mono-sm uppercase tracking-[0.15em]">{l}</p>
-                    <p className="mt-2 truncate text-[22px] font-medium leading-none tabular-nums">{v}</p>
-                    <p className="mt-1.5 truncate text-[12px] text-faint">{s}</p>
+                    <p className={`mt-2 font-medium tabular-nums ${String(v).length > 10 ? "text-[15px] leading-snug" : "text-[22px] leading-none"}`}>{v}</p>
+                    <p className="mt-1.5 text-[12px] leading-snug text-faint">{s}</p>
                   </div>
                 ))}
               </div>
