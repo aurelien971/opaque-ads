@@ -1,55 +1,57 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #f6f5f2;      /* page */
-  --color-surface: #ffffff;  /* cards */
-  --color-stroke: #e6e4df;
-  --color-accent: #547dcc;
-  --color-deep: #2f5fb3;
-  --color-fg: #0b0d12;
-  --color-muted: #6b7280;
+  --color-ink: #f4f1ea;      /* paper — page background */
+  --color-surface: #fbfaf6;  /* panel — cards */
+  --color-deep-panel: #efeae0;
+  --color-stroke: #e6e1d6;   /* ≈ rgba(22,21,15,.08) on paper */
+  --color-accent: #4e5b3a;   /* olive — the single accent */
+  --color-deep: #3d4a2c;
+  --color-fg: #16150f;       /* ink */
+  --color-muted: #55534a;    /* ink-70 */
+  --color-faint: #8a8779;    /* ink-40 */
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), "Times New Roman", Georgia, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, Menlo, monospace;
 }
 
 body {
   background: var(--color-ink);
   color: var(--color-fg);
-  font-feature-settings: "ss01";
-}
-
-.mercury-text {
-  background: linear-gradient(135deg, #0b0d12 0%, #547dcc 55%, #7fa6e6 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.mercury-bg {
-  background: linear-gradient(135deg, #1b2230, #547dcc, #a3c2f0);
-}
-.serif-accent {
-  font-family: var(--font-serif), "Times New Roman", Georgia, serif;
-  font-style: italic;
+  font-family: var(--font-sans);
   font-weight: 400;
+  -webkit-font-smoothing: antialiased;
 }
+.serif { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.02em; }
+.mono { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-faint); }
+.mono-sm { font-family: var(--font-mono); font-size: 10px; color: var(--color-faint); }
+.sun { background: radial-gradient(circle, rgba(255,206,138,0.42) 0%, rgba(255,224,180,0.18) 38%, rgba(244,241,234,0) 68%); }
+.stripes { background: repeating-linear-gradient(135deg, #e9e4d8 0 8px, #e2dccf 8px 16px); }
+.pill-primary {
+  background: #16150f; color: #f4f1ea; border-radius: 999px;
+  box-shadow: 0 18px 40px -18px rgba(22,21,15,0.8);
+  transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease;
+}
+.pill-primary:hover { transform: translateY(-1px); box-shadow: 0 22px 44px -18px rgba(22,21,15,0.9); }
+.pill-secondary { border: 1px solid rgba(22,21,15,0.18); border-radius: 999px; transition: border-color 200ms ease; }
+.pill-secondary:hover { border-color: rgba(22,21,15,0.4); }
+.tilt { transition: transform 400ms cubic-bezier(0.2,0.7,0.2,1); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .tilt:hover { transform: rotateY(0deg) rotateX(0deg) !important; }
+}
+.reveal { opacity: 0; translate: 0 16px; transition: opacity 500ms ease, translate 500ms ease; }
+.reveal.in { opacity: 1; translate: 0 0; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; translate: 0 0; transition: none; } }
+
+.mercury-text { color: var(--color-fg); }
+
+.mercury-bg { background: var(--color-accent); }
+.serif-accent { font-family: var(--font-serif); font-style: normal; font-weight: 400; letter-spacing: -0.02em; }
 
 /* Light glass + the black pill CTA (Arcads-style). */
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  border: 1px solid rgba(11, 13, 18, 0.08);
-  box-shadow: 0 8px 30px rgba(11, 13, 18, 0.06);
-}
-.glass-bright {
-  background: #0b0d12;
-  color: #fff;
-  border: 1px solid transparent;
-  box-shadow: 0 10px 30px rgba(11, 13, 18, 0.22);
-}
-.glass-bright:hover {
-  background: #2f5fb3;
-  box-shadow: 0 12px 34px rgba(47, 95, 179, 0.35);
-}
+.glass { background: #fbfaf6; border: 1px solid rgba(22,21,15,0.08); box-shadow: 0 40px 60px -50px rgba(22,21,15,0.7); }
+.glass-bright { background: #16150f; color: #f4f1ea; border: 1px solid transparent; box-shadow: 0 18px 40px -18px rgba(22,21,15,0.8); transition: transform 200ms ease, box-shadow 200ms ease; }
+.glass-bright:hover { transform: translateY(-1px); box-shadow: 0 22px 44px -18px rgba(22,21,15,0.9); }
 
 /* Card scan-in: a light sweep as content enters (MengTo's loading-scan nod). */
 @keyframes cardscan {
@@ -67,9 +69,9 @@ body {
   background: linear-gradient(
     to top,
     transparent,
-    rgba(84, 125, 204, 0.12) 48%,
-    rgba(84, 125, 204, 0.35) 50%,
-    rgba(84, 125, 204, 0.12) 52%,
+    rgba(22, 21, 15, 0.04) 48%,
+    rgba(22, 21, 15, 0.10) 50%,
+    rgba(22, 21, 15, 0.04) 52%,
     transparent
   );
   animation: cardscan 1.1s ease-out 0.15s both;
