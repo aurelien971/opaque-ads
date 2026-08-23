@@ -101,11 +101,11 @@ export default function Analytics() {
                   <text x={P - 6} y={H - P - t * (H - 2 * P) + 4} textAnchor="end" fontSize="10" fill="#6b7280">{fmtN(yMin + t * (yMax - yMin))}</text>
                 </g>
               ))}
-              <path d={path} fill="none" stroke="#547dcc" strokeWidth="2" strokeLinejoin="round" />
+              <path d={path} fill="none" stroke="#4E5B3A" strokeWidth="2" strokeLinejoin="round" />
               {series.map((s, i) => (
                 <g key={s.date} onMouseEnter={() => setHover(s.date)} onMouseLeave={() => setHover("")}>
                   <circle cx={x(i)} cy={y(s.followers)} r="9" fill="transparent" />
-                  <circle cx={x(i)} cy={y(s.followers)} r="4" fill="#547dcc" stroke="#fff" strokeWidth="2" />
+                  <circle cx={x(i)} cy={y(s.followers)} r="4" fill="#4E5B3A" stroke="#fff" strokeWidth="2" />
                   {(hover === s.date || series.length === 1 || i === series.length - 1) && (
                     <text x={x(i)} y={y(s.followers) - 10} textAnchor="middle" fontSize="11" fontWeight="600" fill="#0b0d12">{fmtN(s.followers)}</text>
                   )}
@@ -136,7 +136,7 @@ export default function Analytics() {
                         key={c.bucket}
                         title={`${DAY_NAMES[c.day]} ${BUCKETS[c.bucket]}h — ${c.count ? `${fmtN(c.avg)} avg views over ${c.count} video${c.count === 1 ? "" : "s"}` : "no posts yet"}`}
                         className={`flex aspect-[2/1] items-center justify-center rounded-md ${isBest ? "ring-2 ring-[#e6a23c]" : ""}`}
-                        style={{ background: c.count ? `rgba(84,125,204,${0.15 + 0.85 * (c.avg / maxAvg)})` : "#f0efeb" }}
+                        style={{ background: c.count ? `rgba(78,91,58,${0.15 + 0.85 * (c.avg / maxAvg)})` : "#f0efeb" }}
                       >
                         {c.count > 0 && <span className={`font-semibold ${c.avg / maxAvg > 0.55 ? "text-white" : "text-fg"}`}>{fmtN(c.avg)}</span>}
                       </div>
@@ -163,7 +163,7 @@ export default function Analytics() {
                       <td className="py-2 font-medium">{t.tag}</td>
                       <td className="py-2 text-right tabular-nums">{t.uses}</td>
                       <td className="py-2 text-right tabular-nums">
-                        <span className="mr-2 inline-block h-2 rounded-sm bg-[#547dcc] align-middle" style={{ width: `${Math.max(4, (t.avgViews / (tags[0].avgViews || 1)) * 80)}px` }} />
+                        <span className="mr-2 inline-block h-2 rounded-sm bg-[#4E5B3A] align-middle" style={{ width: `${Math.max(4, (t.avgViews / (tags[0].avgViews || 1)) * 80)}px` }} />
                         {fmtN(t.avgViews)}
                       </td>
                       <td className="py-2 text-right tabular-nums">{(t.likeRate * 100).toFixed(1)}%</td>

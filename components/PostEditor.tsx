@@ -128,20 +128,20 @@ export default function PostEditor({
             <div className="flex flex-wrap gap-4 text-sm">
               {([["Comments", allowComments, setAllowComments], ["Duet", allowDuet, setAllowDuet], ["Stitch", allowStitch, setAllowStitch]] as const).map(([l, v, set]) => (
                 <label key={l} className="flex items-center gap-2">
-                  <input type="checkbox" checked={v} onChange={(e) => set(e.target.checked)} className="accent-[#547dcc]" /> {l}
+                  <input type="checkbox" checked={v} onChange={(e) => set(e.target.checked)} className="accent-[#4E5B3A]" /> {l}
                 </label>
               ))}
             </div>
 
             <div className="rounded-xl border border-stroke bg-ink p-3 text-sm">
               <label className="flex items-center gap-2 font-semibold">
-                <input type="checkbox" checked={commercial} onChange={(e) => setCommercial(e.target.checked)} className="accent-[#547dcc]" />
+                <input type="checkbox" checked={commercial} onChange={(e) => setCommercial(e.target.checked)} className="accent-[#4E5B3A]" />
                 Commercial content
               </label>
               {commercial && (
                 <div className="mt-2 space-y-1.5 pl-6 text-xs">
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={yourBrand} onChange={(e) => setYourBrand(e.target.checked)} className="accent-[#547dcc]" /> Your brand</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={brandedContent} onChange={(e) => setBrandedContent(e.target.checked)} className="accent-[#547dcc]" /> Branded content (paid partnership)</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={yourBrand} onChange={(e) => setYourBrand(e.target.checked)} className="accent-[#4E5B3A]" /> Your brand</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={brandedContent} onChange={(e) => setBrandedContent(e.target.checked)} className="accent-[#4E5B3A]" /> Branded content (paid partnership)</label>
                 </div>
               )}
             </div>

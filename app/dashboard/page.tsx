@@ -1,6 +1,7 @@
 "use client";
-// The dashboard: connect TikTok → bulk-upload videos → set a cadence → the
-// calendar fills → posts go out on time → results come back.
+// The workspace. Three questions, answered top to bottom — what's going out,
+// what went out, how it did — with the account and the controls on the right.
+// Not connected yet? One focused panel, nothing else.
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "firebase/auth";
 import { deleteField, doc, onSnapshot, updateDoc } from "firebase/firestore";
@@ -8,26 +9,19 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import PostComposer from "@/components/PostComposer";
 import PostEditor from "@/components/PostEditor";
-import Studio from "@/components/Studio";
-import Link from "next/link";
-import { bestSlots, describeSlots } from "@/lib/analytics";
+import AccountCard from "@/components/AccountCard";
+import OrbitMark from "@/components/OrbitMark";
+import { bestSlots, describeSlots, fmtN } from "@/lib/analytics";
 import type { TikTokVideo } from "@/lib/tiktok-server";
-import { auth, db, firebaseConfigured } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { useRequireAuth } from "@/lib/auth";
 import { buildAuthUrl, tiktokClientKey, type TikTokConnection } from "@/lib/tiktok";
-import {
-  autoSchedule,
-  scheduleAt,
-  smartSchedule,
-  unschedule,
-  updatePost,
-  uploadPost,
-  watchPosts,
-  type Post,
-} from "@/lib/posts";
+import { autoSchedule, scheduleAt, smartSchedule, uploadPost, watchPosts, type Post } from "@/lib/posts";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 const PRIVACY_LABEL: Record<string, string> = { PUBLIC_TO_EVERYONE: "Public", MUTUAL_FOLLOW_FRIENDS: "Friends", FOLLOWER_OF_CREATOR: "Followers", SELF_ONLY: "Only me" };
+
+const card = "rounded-[20px] border border-[rgba(22,21,15,0.08)] bg-surface";
 
 export default function Dashboard() {
   const { user, loading } = useRequireAuth();
@@ -39,385 +33,349 @@ export default function Dashboard() {
   const [notice, setNotice] = useState("");
   const [running, setRunning] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [videos, setVideos] = useState<TikTokVideo[]>([]);
+  const [more, setMore] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Cadence
-  const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  // Custom cadence
+  const [days, setDays] = useState<number[]>([2, 4, 6]);
   const [time, setTime] = useState("18:00");
   const [perDay, setPerDay] = useState(1);
-  const [exact, setExact] = useState("");   // datetime-local, user's own time zone
-  const [videos, setVideos] = useState<TikTokVideo[]>([]);   // lifted from Studio for smart slots
-  const [more, setMore] = useState(false);
-
-  async function smart() {
-    const { slots, basis } = bestSlots(videos);
-    const times = await smartSchedule(drafts, slots);
-    setNotice(
-      `${times.length} video${times.length === 1 ? "" : "s"} scheduled on your best slots — ${describeSlots(slots)} (${basis === "history" ? "based on your account's history" : "TikTok defaults until you have more history"}). First one ${times[0]?.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) ?? ""}.`,
-    );
-  }
-
-  async function quick(minutes: number) {
-    const n = await scheduleAt(drafts, new Date(Date.now() + minutes * 60_000));
-    setNotice(`${n} video${n === 1 ? "" : "s"} scheduled for ${new Date(Date.now() + minutes * 60_000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} (your time).`);
-  }
-  async function atExact() {
-    if (!exact) return;
-    const when = new Date(exact);
-    const n = await scheduleAt(drafts, when);
-    setNotice(`${n} video${n === 1 ? "" : "s"} scheduled for ${when.toLocaleString()}.`);
-  }
+  const [exact, setExact] = useState("");
 
   useEffect(() => {
     if (!user) return;
-    const stopUser = onSnapshot(doc(db, "users", user.uid), (snap) => {
-      setConnection((snap.data()?.tiktok as TikTokConnection) ?? null);
-    });
+    const stopUser = onSnapshot(doc(db, "users", user.uid), (snap) => setConnection((snap.data()?.tiktok as TikTokConnection) ?? null));
     const stopPosts = watchPosts(user.uid, setPosts);
-    return () => {
-      stopUser();
-      stopPosts();
-    };
+    return () => { stopUser(); stopPosts(); };
   }, [user]);
 
-  // Belt and braces for the free clock: if anything is overdue while the
-  // dashboard is open, fire the scheduler ourselves (once per overdue set).
-  const overdueKey = posts
-    .filter((p) => p.status === "scheduled" && (p.dueAt?.toMillis() ?? Infinity) <= Date.now())
-    .map((p) => p.id)
-    .join(",");
+  // If anything is overdue while the page is open, fire the scheduler ourselves.
+  const overdueKey = posts.filter((p) => p.status === "scheduled" && (p.dueAt?.toMillis() ?? Infinity) <= Date.now()).map((p) => p.id).join(",");
   useEffect(() => {
     if (!overdueKey || !connection || running) return;
     runNow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overdueKey]);
 
-  if (loading || !user) {
-    return <div className="flex min-h-screen items-center justify-center text-muted">Loading…</div>;
-  }
+  if (loading || !user) return <div className="flex min-h-screen items-center justify-center text-faint">Loading…</div>;
 
   const drafts = posts.filter((p) => p.status === "draft");
-  const scheduled = posts
-    .filter((p) => p.status === "scheduled")
-    .sort((a, b) => (a.dueAt?.toMillis() ?? 0) - (b.dueAt?.toMillis() ?? 0));
-  const posted = posts.filter((p) => p.status === "posted" || p.status === "failed");
+  const scheduled = posts.filter((p) => p.status === "scheduled").sort((a, b) => (a.dueAt?.toMillis() ?? 0) - (b.dueAt?.toMillis() ?? 0));
+  const sent = posts.filter((p) => p.status === "posted" || p.status === "failed").sort((a, b) => (b.postedAt?.toMillis() ?? 0) - (a.postedAt?.toMillis() ?? 0));
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+  const postedThisMonth = sent.filter((p) => p.status === "posted" && (p.postedAt?.toMillis() ?? 0) >= monthStart.getTime()).length;
+  const avgViews = videos.length ? videos.reduce((a, v) => a + v.views, 0) / videos.length : 0;
+  const slots = bestSlots(videos);
 
   async function authed(path: string, body: unknown) {
-    const token = await user!.getIdToken();
-    const res = await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await user!.getIdToken()}` }, body: JSON.stringify(body) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "Request failed.");
     return data;
   }
-
   async function connectTikTok() {
-    if (!tiktokClientKey()) {
-      setNotice("TikTok keys aren't configured on the server yet.");
-      return;
-    }
+    if (!tiktokClientKey()) { setNotice("TikTok keys aren't configured on the server yet."); return; }
     window.location.href = await buildAuthUrl();
   }
-
   async function onUpload(files: FileList | null) {
     if (!files?.length) return;
-    const list = Array.from(files);
+    const list = Array.from(files).filter((f) => f.type.startsWith("video/"));
     for (let i = 0; i < list.length; i++) {
       setUploading({ done: i, total: list.length, pct: 0 });
-      try {
-        await uploadPost(user!.uid, list[i], (pct) => setUploading({ done: i, total: list.length, pct }));
-      } catch (e) {
-        setNotice(`Upload failed for ${list[i].name}: ${e instanceof Error ? e.message : "unknown error"}`);
-      }
+      try { await uploadPost(user!.uid, list[i], (pct) => setUploading({ done: i, total: list.length, pct })); }
+      catch (e) { setNotice(`Upload failed for ${list[i].name}: ${e instanceof Error ? e.message : "unknown error"}`); }
     }
     setUploading(null);
   }
-
-  async function scheduleAll() {
+  async function smart() {
+    const { slots: s, basis } = bestSlots(videos);
+    const times = await smartSchedule(drafts, s);
+    setNotice(`${times.length} video${times.length === 1 ? "" : "s"} scheduled on ${describeSlots(s)} — ${basis === "history" ? "your account's best slots" : "sensible defaults until there's more history"}.`);
+  }
+  async function quick(minutes: number) {
+    const n = await scheduleAt(drafts, new Date(Date.now() + minutes * 60_000));
+    setNotice(`${n} video${n === 1 ? "" : "s"} scheduled for ${new Date(Date.now() + minutes * 60_000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`);
+  }
+  async function atExact() {
+    if (!exact) return;
+    const n = await scheduleAt(drafts, new Date(exact));
+    setNotice(`${n} video${n === 1 ? "" : "s"} scheduled for ${new Date(exact).toLocaleString()}.`);
+  }
+  async function cadence() {
     const [h, m] = time.split(":").map(Number);
     const n = await autoSchedule(drafts, { days, hour: h, minute: m, startFrom: new Date(), perDay });
     setNotice(`${n} video${n === 1 ? "" : "s"} placed on the calendar.`);
   }
-
   async function runNow() {
     setRunning(true);
     try {
       const r = await authed("/api/scheduler/run", {});
-      setNotice(
-        `Scheduler ran — ${r.published.length} published, ${r.failed.length} failed, ${r.statsUpdated} stats refreshed.`,
-      );
-    } catch (e) {
-      setNotice(e instanceof Error ? e.message : "Scheduler failed.");
-    } finally {
-      setRunning(false);
-    }
+      setNotice(`Scheduler ran — ${r.published.length} published, ${r.failed.length} failed, ${r.statsUpdated} stats refreshed.`);
+    } catch (e) { setNotice(e instanceof Error ? e.message : "Scheduler failed."); }
+    finally { setRunning(false); }
   }
 
-  const fmt = (p: Post) =>
-    p.dueAt?.toDate().toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) ?? "";
+  const dayKey = (d: Date) => d.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+  const byDay = scheduled.reduce<Record<string, Post[]>>((acc, p) => {
+    const d = p.dueAt!.toDate();
+    const today = new Date(); const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
+    const k = d.toDateString() === today.toDateString() ? "Today" : d.toDateString() === tomorrow.toDateString() ? "Tomorrow" : dayKey(d);
+    (acc[k] ??= []).push(p);
+    return acc;
+  }, {});
+  const hm = (d?: Date) => d?.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) ?? "";
+  const hms = (d?: Date) => d?.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) ?? "";
+  const greeting = (() => { const h = new Date().getHours(); return h < 12 ? "Good morning." : h < 18 ? "Good afternoon." : "Good evening."; })();
+  const headline = !connection
+    ? "Let's connect your TikTok."
+    : scheduled.length
+      ? `${scheduled.length} video${scheduled.length === 1 ? "" : "s"} go${scheduled.length === 1 ? "es" : ""} out on schedule. Next one ${byDay["Today"] ? "today" : byDay["Tomorrow"] ? "tomorrow" : dayKey(scheduled[0].dueAt!.toDate())} at ${hm(scheduled[0].dueAt?.toDate())}.`
+      : drafts.length
+        ? `${drafts.length} draft${drafts.length === 1 ? "" : "s"} waiting for a slot.`
+        : "Nothing scheduled yet. Drop in this week's videos.";
 
   return (
     <>
       <Nav />
-      <main className="mx-auto min-h-[80vh] max-w-6xl px-5 py-10">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Your studio</h1>
-          <div className="flex items-center gap-4 text-sm text-muted">
-            {connection && <Link href="/dashboard/analytics" className="font-semibold text-accent hover:underline">Analytics →</Link>}
+      <main className="mx-auto min-h-[80vh] max-w-[1080px] px-6 pb-[90px] pt-6 md:px-12">
+        {/* Header */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="mono">{greeting}</p>
+            <h1 className="serif mt-2 max-w-[640px] text-[30px] leading-[1.1] md:text-[36px]">{headline}</h1>
+          </div>
+          <div className="flex items-center gap-4 text-[13px] text-faint">
             <span>{user.email}</span>
             <button onClick={() => signOut(auth)} className="hover:text-fg">Sign out</button>
           </div>
         </div>
 
-        {!firebaseConfigured && (
-          <div className="mt-4 rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm text-orange-800">
-            Database not configured — set the NEXT_PUBLIC_FIREBASE_* variables.
-          </div>
-        )}
         {notice && (
-          <div className="mt-4 flex items-start justify-between gap-4 rounded-xl border border-accent/30 bg-surface p-4 text-sm">
-            <span>{notice}</span>
-            <button onClick={() => setNotice("")} className="text-muted hover:text-fg">✕</button>
+          <div className={`${card} mt-6 flex items-start justify-between gap-4 px-5 py-4 text-[14px]`}>
+            <span className="text-muted">{notice}</span>
+            <button onClick={() => setNotice("")} className="text-faint hover:text-fg">✕</button>
           </div>
         )}
 
-        {/* 1 · Connect */}
-        <section className="mt-6 rounded-2xl border border-stroke bg-surface p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold tracking-widest text-accent">STEP 1</p>
-              <h2 className="mt-1 font-semibold">TikTok account</h2>
-              <p className="mt-1 text-sm text-muted">
-                {connection ? (
-                  <>Connected as <span className="font-semibold text-fg">@{connection.displayName}</span>. Posts go to this account.</>
-                ) : (
-                  <>Connect the account you want to post to. You approve the permissions on TikTok&apos;s screen.</>
-                )}
+        {/* Not connected: one focused panel */}
+        {!connection ? (
+          <div className={`${card} relative mt-8 overflow-hidden px-8 py-14 text-center md:px-12`}>
+            <div className="sun pointer-events-none absolute left-1/2 top-[-220px] h-[500px] w-[800px] -translate-x-1/2 rounded-full" />
+            <div className="relative">
+              <OrbitMark size={56} ringWidth={2} className="mx-auto" />
+              <h2 className="serif mx-auto mt-6 max-w-[520px] text-[32px] leading-[1.1] md:text-[40px]">Connect the account your videos should post to.</h2>
+              <p className="mx-auto mt-4 max-w-[460px] text-[16px] leading-[1.6] text-muted">
+                You approve the permissions on TikTok&apos;s own screen. Nothing posts without you scheduling it.
               </p>
+              <button onClick={connectTikTok} className="pill-primary mt-8 px-8 py-4 text-[15px] font-medium">Connect TikTok</button>
+              <p className="mt-4 text-[13px] text-faint">Disconnect any time, here or in TikTok.</p>
             </div>
-            {connection ? (
-              <button
-                onClick={() => updateDoc(doc(db, "users", user.uid), { tiktok: deleteField() })}
-                className="rounded-full border border-stroke px-5 py-2 text-sm font-semibold hover:border-red-400 hover:text-red-500"
-              >
-                Disconnect
-              </button>
-            ) : (
-              <button onClick={connectTikTok} className="glass-bright rounded-full px-5 py-2 text-sm font-semibold">
-                Connect TikTok
-              </button>
-            )}
           </div>
-        </section>
-
-        {connection && <Studio getToken={() => user.getIdToken()} onVideos={setVideos} />}
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-          {/* 2 · Upload */}
-          <section
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("video/"));
-              const dt = new DataTransfer();
-              files.forEach((f) => dt.items.add(f));
-              onUpload(dt.files);
-            }}
-            className={`rounded-2xl border-2 border-dashed p-6 text-center transition ${
-              dragging ? "border-accent bg-accent/5 shadow-[0_0_40px_rgba(84,125,204,0.25)]" : "border-stroke bg-surface"
-            }`}
-          >
-            <p className="text-xs font-bold tracking-widest text-accent">STEP 2</p>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="video/mp4,video/quicktime"
-              multiple
-              hidden
-              onChange={(e) => onUpload(e.target.files)}
-            />
-            {uploading ? (
-              <div className="mt-3">
-                <p className="text-sm text-muted">
-                  Uploading {uploading.done + 1} of {uploading.total} · {uploading.pct}%
-                </p>
-                <div className="mx-auto mt-2 h-1.5 w-64 overflow-hidden rounded-full bg-ink">
-                  <div className="mercury-bg h-full transition-all" style={{ width: `${uploading.pct}%` }} />
-                </div>
-              </div>
-            ) : (
-              <>
-                <button onClick={() => fileInput.current?.click()} className="glass-bright mt-3 rounded-full px-6 py-2.5 text-sm font-semibold">
-                  Upload videos
-                </button>
-                <p className="mt-2 text-xs text-muted">{dragging ? "Drop them!" : "Or drag videos here. MP4 or MOV, up to 64 MB each — as many as you like."}</p>
-              </>
-            )}
-            {drafts.length > 0 && (
-              <div className="mt-6 grid grid-cols-2 gap-3 text-left sm:grid-cols-3 md:grid-cols-4">
-                {drafts.map((p) => (
-                  <PostCard key={p.id} p={p} onOpen={() => setEditing(p)} onPublish={() => (connection ? setComposing(p) : setNotice("Connect TikTok first."))} />
+        ) : (
+          <div className="mt-8 grid gap-7 lg:grid-cols-[1fr_320px]">
+            {/* ================= Main ================= */}
+            <div className="min-w-0 space-y-10">
+              {/* Stat strip */}
+              <div className="grid gap-3 sm:grid-cols-4">
+                {[
+                  ["Up next", String(scheduled.length), scheduled[0] ? hm(scheduled[0].dueAt?.toDate()) + (byDay["Today"] ? " today" : "") : "nothing queued"],
+                  ["Posted this month", String(postedThisMonth), "through OAISIS"],
+                  ["Avg views / video", fmtN(avgViews), `last ${videos.length} on TikTok`],
+                  ["Best slots", describeSlots(slots.slots), slots.basis === "history" ? "from your history" : "defaults for now"],
+                ].map(([l, v, s]) => (
+                  <div key={l} className={`${card} p-4`}>
+                    <p className="mono-sm uppercase tracking-[0.15em]">{l}</p>
+                    <p className="mt-2 truncate text-[22px] font-medium leading-none tabular-nums">{v}</p>
+                    <p className="mt-1.5 truncate text-[12px] text-faint">{s}</p>
+                  </div>
                 ))}
               </div>
-            )}
-          </section>
 
-          {/* 3 · Schedule */}
-          <section className="rounded-2xl border border-stroke bg-surface p-6">
-            <p className="text-xs font-bold tracking-widest text-accent">STEP 3</p>
-            <h2 className="mt-1 font-semibold">Schedule</h2>
-            <p className="mt-1 text-sm text-muted">
-              {drafts.length === 0
-                ? "Upload videos first — then one click puts them on the calendar."
-                : `${drafts.length} draft${drafts.length === 1 ? "" : "s"} waiting.`}
-            </p>
-
-            <button
-              onClick={smart}
-              disabled={!drafts.length}
-              className="glass-bright mt-5 w-full rounded-full py-3 text-sm font-semibold disabled:opacity-40"
-            >
-              ✦ Smart schedule {drafts.length ? `${drafts.length} video${drafts.length === 1 ? "" : "s"}` : ""}
-            </button>
-            <p className="mt-2 text-[11px] leading-snug text-muted">
-              Picks the days and hours that perform best on <em>your</em> account ({describeSlots(bestSlots(videos).slots)}) and spreads the drafts across them.
-            </p>
-
-            <button onClick={() => setMore(!more)} className="mt-4 text-xs font-semibold text-accent hover:underline">
-              {more ? "Hide options" : "Pick my own time or cadence"}
-            </button>
-
-            {more && (
-              <div className="mt-3 space-y-4 border-t border-stroke pt-4">
-                <div>
-                  <p className="text-xs font-semibold text-muted">AT AN EXACT TIME (your time zone)</p>
-                  <div className="mt-2 flex gap-2">
-                    <input type="datetime-local" value={exact} onChange={(e) => setExact(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-stroke bg-ink px-2 py-1.5 text-xs" />
-                    <button onClick={atExact} disabled={!drafts.length || !exact} className="rounded-full border border-stroke px-3 py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40">Set</button>
+              {/* Up next */}
+              <section>
+                <div className="flex items-end justify-between">
+                  <h2 className="serif text-[28px]">Up next</h2>
+                  <span className="mono-sm">{scheduled.length} scheduled</span>
+                </div>
+                {scheduled.length === 0 ? (
+                  <div className={`${card} mt-4 px-6 py-8 text-center text-[14px] text-muted`}>
+                    {drafts.length ? "Your drafts are ready — hit Smart schedule on the right." : "Nothing on the calendar. Add videos below, then schedule them."}
                   </div>
-                  <div className="mt-2 flex gap-2">
-                    {[5, 15, 60].map((m) => (
-                      <button key={m} onClick={() => quick(m)} disabled={!drafts.length} className="flex-1 rounded-full border border-stroke py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40">
-                        in {m < 60 ? `${m} min` : "1 h"}
-                      </button>
+                ) : (
+                  <div className="mt-4 space-y-5">
+                    {Object.entries(byDay).map(([day, items]) => (
+                      <div key={day}>
+                        <p className="mono mb-2">{day}</p>
+                        <div className={`${card} divide-y divide-[rgba(22,21,15,0.08)]`}>
+                          {items.map((p) => (
+                            <button key={p.id} onClick={() => setEditing(p)} className="flex w-full items-center gap-4 px-4 py-3 text-left transition hover:bg-ink/60">
+                              <video src={p.videoUrl} preload="metadata" className="h-14 w-9 rounded-lg bg-[#16150F] object-cover" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[14px] font-medium">{p.caption || <span className="font-normal text-faint">No caption yet</span>}</p>
+                                <p className="mono-sm mt-0.5 truncate">{p.name}{p.hashtags ? ` · ${p.hashtags}` : ""} · {PRIVACY_LABEL[p.privacy ?? "SELF_ONLY"]}</p>
+                              </div>
+                              <span className="font-mono text-[12px] tabular-nums">{hm(p.dueAt?.toDate())}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-muted">REPEATING CADENCE</p>
-                  <div className="mt-2 flex gap-1.5">
-                    {DAY_LABELS.map((l, i) => (
-                      <button key={i} onClick={() => setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i]))} className={`h-8 w-8 rounded-full text-xs font-semibold transition ${days.includes(i) ? "bg-fg text-white" : "bg-ink text-muted hover:text-fg"}`}>{l}</button>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 text-xs">
-                    <span className="text-muted">at</span>
-                    <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="rounded-lg border border-stroke bg-ink px-2 py-1" />
-                    <select value={perDay} onChange={(e) => setPerDay(Number(e.target.value))} className="rounded-lg border border-stroke bg-ink px-2 py-1">
-                      {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} / day</option>)}
-                    </select>
-                    <button onClick={scheduleAll} disabled={!drafts.length || !days.length} className="ml-auto rounded-full border border-stroke px-3 py-1 font-semibold hover:border-accent disabled:opacity-40">Apply</button>
-                  </div>
-                </div>
-                <button onClick={runNow} disabled={running} className="w-full rounded-full border border-stroke py-1.5 text-xs font-semibold text-muted hover:border-accent hover:text-fg disabled:opacity-40">
-                  {running ? "Running…" : "Run scheduler now"}
-                </button>
-              </div>
-            )}
-          </section>
-        </div>
+                )}
+              </section>
 
-        {/* 4 · Calendar */}
-        <section className="mt-8">
-          <h2 className="font-semibold">
-            Up next <span className="text-sm font-normal text-muted">{scheduled.length} scheduled</span>
-          </h2>
-          {scheduled.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">Nothing scheduled. Upload videos, then set the cadence.</p>
-          ) : (
-            <div className="mt-4 divide-y divide-stroke rounded-2xl border border-stroke bg-surface">
-              {scheduled.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setEditing(p)}
-                  className="flex w-full items-center gap-4 px-4 py-3 text-left transition hover:bg-ink"
+              {/* Drafts + upload */}
+              <section>
+                <div className="flex items-end justify-between">
+                  <h2 className="serif text-[28px]">Drafts</h2>
+                  <span className="mono-sm">{drafts.length} waiting</span>
+                </div>
+                <input ref={fileInput} type="file" accept="video/mp4,video/quicktime" multiple hidden onChange={(e) => onUpload(e.target.files)} />
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragging(false); onUpload(e.dataTransfer.files); }}
+                  className={`mt-4 grid grid-cols-3 gap-3 rounded-[20px] border border-dashed p-3 transition sm:grid-cols-4 md:grid-cols-5 ${dragging ? "border-accent bg-surface" : "border-[rgba(22,21,15,0.2)]"}`}
                 >
-                  <video src={p.videoUrl} preload="metadata" className="h-16 w-10 rounded-lg bg-ink object-cover" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{p.name}</p>
-                    <p className="truncate text-xs text-muted">
-                      {p.caption || <span className="italic">No caption yet — click to add</span>}
-                      {p.hashtags ? ` · ${p.hashtags}` : ""}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-muted">
-                      {PRIVACY_LABEL[p.privacy ?? "SELF_ONLY"]} · {p.allowComments === false ? "comments off" : "comments on"}
-                      {p.commercial ? " · commercial" : ""}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">{fmt(p)}</p>
-                    <p className="text-[11px] text-accent">Edit details →</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* 5 · Results */}
-        {posted.length > 0 && (
-          <section className="mt-10">
-            <h2 className="font-semibold">
-              Results <span className="text-sm font-normal text-muted">{posted.length}</span>
-            </h2>
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-stroke bg-surface">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-muted">
-                  <tr>
-                    <th className="px-4 py-3">Video</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Views</th>
-                    <th className="px-4 py-3 text-right">Likes</th>
-                    <th className="px-4 py-3 text-right">Comments</th>
-                    <th className="px-4 py-3 text-right">Shares</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stroke">
-                  {posted.map((p) => (
-                    <tr key={p.id}>
-                      <td className="px-4 py-3 font-medium">{p.name}</td>
-                      <td className="px-4 py-3">
-                        {p.status === "failed" ? (
-                          <span className="text-red-500" title={p.error}>Failed — {p.error}</span>
-                        ) : (
-                          <span className="block text-green-600">
-                            {p.mode === "inbox" ? "Sent to TikTok inbox" : "Posted"}
-                            {p.postedAt ? ` · ${p.postedAt.toDate().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}` : ""}
-                            <span className="block text-[11px] text-muted">
-                              {p.deliveredAt
-                                ? `Delivered ${p.deliveredAt.toDate().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}`
-                                : p.processing
-                                  ? `TikTok: ${p.processing.toLowerCase().replace(/_/g, " ")}`
-                                  : "Awaiting TikTok confirmation…"}
-                            </span>
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">{p.stats?.views ?? "—"}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{p.stats?.likes ?? "—"}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{p.stats?.comments ?? "—"}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{p.stats?.shares ?? "—"}</td>
-                    </tr>
+                  <button onClick={() => fileInput.current?.click()} className="flex aspect-[9/14] flex-col items-center justify-center rounded-[12px] border border-[rgba(22,21,15,0.14)] text-center transition hover:border-fg">
+                    {uploading ? (
+                      <>
+                        <span className="font-mono text-[12px]">{uploading.pct}%</span>
+                        <span className="mono-sm mt-1">{uploading.done + 1} of {uploading.total}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[22px] leading-none">+</span>
+                        <span className="mono-sm mt-2">{dragging ? "drop" : "add videos"}</span>
+                      </>
+                    )}
+                  </button>
+                  {drafts.map((p) => (
+                    <button key={p.id} onClick={() => setEditing(p)} className="group relative aspect-[9/14] overflow-hidden rounded-[12px] bg-[#16150F] text-left">
+                      <video src={p.videoUrl} preload="metadata" className="h-full w-full object-cover transition group-hover:opacity-80" />
+                      <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6 text-[11px] text-[#F4F1EA]">{p.caption || p.name}</span>
+                    </button>
                   ))}
-                </tbody>
-              </table>
+                </div>
+                <p className="mt-2 text-[12px] text-faint">MP4 or MOV, up to 64 MB each. Click a draft to add its caption, hashtags and privacy.</p>
+              </section>
+
+              {/* Sent */}
+              {sent.length > 0 && (
+                <section>
+                  <div className="flex items-end justify-between">
+                    <h2 className="serif text-[28px]">Sent</h2>
+                    <span className="mono-sm">{sent.length} total</span>
+                  </div>
+                  <div className={`${card} mt-4 overflow-x-auto`}>
+                    <table className="w-full text-[13px]">
+                      <thead><tr className="mono-sm text-left">
+                        <th className="px-4 py-3 font-normal">Video</th><th className="px-4 py-3 font-normal">Sent</th><th className="px-4 py-3 font-normal">Delivered</th>
+                        <th className="px-4 py-3 text-right font-normal">Views</th><th className="px-4 py-3 text-right font-normal">Likes</th><th className="px-4 py-3 text-right font-normal">Comments</th>
+                      </tr></thead>
+                      <tbody className="divide-y divide-[rgba(22,21,15,0.08)]">
+                        {sent.map((p) => (
+                          <tr key={p.id} className="cursor-pointer hover:bg-ink/60" onClick={() => setEditing(p)}>
+                            <td className="max-w-[260px] truncate px-4 py-3 font-medium">{p.caption || p.name}</td>
+                            <td className="px-4 py-3 font-mono text-[12px] tabular-nums">
+                              {p.status === "failed" ? <span className="text-red-700" title={p.error}>failed</span> : hms(p.postedAt?.toDate())}
+                            </td>
+                            <td className="px-4 py-3 font-mono text-[12px] tabular-nums text-muted">
+                              {p.deliveredAt ? `${hms(p.deliveredAt.toDate())}${p.mode === "inbox" ? " · inbox" : ""}` : p.status === "failed" ? (p.error ?? "").slice(0, 40) : p.processing ? p.processing.toLowerCase().replace(/_/g, " ") : "confirming…"}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums">{p.stats ? fmtN(p.stats.views) : "—"}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{p.stats ? fmtN(p.stats.likes) : "—"}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{p.stats ? fmtN(p.stats.comments) : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {sent.some((p) => p.mode === "inbox") && (
+                    <p className="mt-2 text-[12px] text-faint">Inbox deliveries are waiting in your TikTok app — open the notification to add a sound and post.</p>
+                  )}
+                </section>
+              )}
+
+              {/* Recent on TikTok */}
+              {videos.length > 0 && (
+                <section>
+                  <div className="flex items-end justify-between">
+                    <h2 className="serif text-[28px]">Recent on TikTok</h2>
+                    <a href="/dashboard/analytics" className="text-[13px] font-medium hover:text-accent">All analytics →</a>
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
+                    {videos.slice(0, 5).map((v) => (
+                      <a key={v.id} href={v.url} target="_blank" rel="noreferrer" className="group relative aspect-[9/14] overflow-hidden rounded-[12px] bg-[#16150F]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {v.cover && <img src={v.cover} alt="" className="h-full w-full object-cover transition group-hover:opacity-85" />}
+                        <span className="absolute bottom-2 left-2 rounded-full bg-[#F4F1EA]/90 px-2 py-0.5 font-mono text-[10px] text-fg">▶ {fmtN(v.views)}</span>
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
-          </section>
+
+            {/* ================= Sidebar ================= */}
+            <aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
+              <AccountCard
+                getToken={() => user.getIdToken()}
+                onVideos={setVideos}
+                onDisconnect={() => updateDoc(doc(db, "users", user.uid), { tiktok: deleteField() })}
+              />
+
+              <div className={`${card} p-5`}>
+                <p className="mono">Schedule</p>
+                <p className="mt-3 text-[14px] leading-[1.5] text-muted">
+                  {drafts.length ? `${drafts.length} draft${drafts.length === 1 ? "" : "s"} ready.` : "Add videos first."}{" "}
+                  Smart schedule uses {slots.basis === "history" ? "your account's best hours" : "sensible defaults"}: <span className="text-fg">{describeSlots(slots.slots)}</span>.
+                </p>
+                <button onClick={smart} disabled={!drafts.length} className="pill-primary mt-4 w-full py-3 text-[14px] font-medium disabled:opacity-40">
+                  Smart schedule{drafts.length ? ` ${drafts.length}` : ""}
+                </button>
+                <button onClick={() => setMore(!more)} className="mt-3 text-[12px] text-faint hover:text-fg">{more ? "Hide options" : "Pick my own time or cadence"}</button>
+                {more && (
+                  <div className="mt-4 space-y-4 border-t border-[rgba(22,21,15,0.08)] pt-4">
+                    <div>
+                      <p className="mono-sm uppercase tracking-[0.15em]">Exact time</p>
+                      <div className="mt-2 flex gap-2">
+                        <input type="datetime-local" value={exact} onChange={(e) => setExact(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-[rgba(22,21,15,0.14)] bg-ink px-2 py-1.5 text-[12px]" />
+                        <button onClick={atExact} disabled={!drafts.length || !exact} className="pill-secondary px-3 text-[12px] font-medium disabled:opacity-40">Set</button>
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        {[5, 15, 60].map((m) => (
+                          <button key={m} onClick={() => quick(m)} disabled={!drafts.length} className="pill-secondary flex-1 py-1.5 text-[12px] disabled:opacity-40">in {m < 60 ? `${m} min` : "1 h"}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mono-sm uppercase tracking-[0.15em]">Weekly cadence</p>
+                      <div className="mt-2 flex gap-1.5">
+                        {DAY_LABELS.map((l, i) => (
+                          <button key={i} onClick={() => setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i]))} className="h-8 w-8 rounded-full text-[12px] font-medium transition" style={{ background: days.includes(i) ? "#4E5B3A" : "rgba(22,21,15,0.07)", color: days.includes(i) ? "#F4F1EA" : "#55534A" }}>{l}</button>
+                        ))}
+                      </div>
+                      <div className="mt-2 flex items-center gap-2 text-[12px]">
+                        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="rounded-lg border border-[rgba(22,21,15,0.14)] bg-ink px-2 py-1" />
+                        <select value={perDay} onChange={(e) => setPerDay(Number(e.target.value))} className="rounded-lg border border-[rgba(22,21,15,0.14)] bg-ink px-2 py-1">
+                          {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} / day</option>)}
+                        </select>
+                        <button onClick={cadence} disabled={!drafts.length || !days.length} className="pill-secondary ml-auto px-3 py-1 font-medium disabled:opacity-40">Apply</button>
+                      </div>
+                    </div>
+                    <button onClick={runNow} disabled={running} className="pill-secondary w-full py-1.5 text-[12px] text-muted disabled:opacity-40">{running ? "Running…" : "Run scheduler now"}</button>
+                  </div>
+                )}
+              </div>
+
+              <div className={`${card} flex items-center gap-3 px-5 py-4`}>
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                <p className="text-[12px] text-muted">Scheduler active · checks every 5 minutes{running ? " · running now" : ""}</p>
+              </div>
+            </aside>
+          </div>
         )}
       </main>
       <Footer />
@@ -426,47 +384,20 @@ export default function Dashboard() {
         <PostEditor
           post={posts.find((p) => p.id === editing.id) ?? editing}
           onClose={() => setEditing(null)}
-          onPostNow={() => {
-            if (!connection) { setNotice("Connect TikTok first."); return; }
-            setComposing(editing);
-            setEditing(null);
-          }}
+          onPostNow={() => { if (!connection) { setNotice("Connect TikTok first."); return; } setComposing(editing); setEditing(null); }}
         />
       )}
-
       {composing && connection && (
         <PostComposer
           creative={{ id: composing.id, caption: composing.caption }}
           connection={connection}
           onClose={() => setComposing(null)}
           onPublish={async (opts) => {
-            try {
-              await authed("/api/tiktok/publish", { postId: composing.id, ...opts });
-              return null;
-            } catch (e) {
-              return e instanceof Error ? e.message : "Publish failed.";
-            }
+            try { await authed("/api/tiktok/publish", { postId: composing.id, ...opts }); return null; }
+            catch (e) { return e instanceof Error ? e.message : "Publish failed."; }
           }}
         />
       )}
     </>
-  );
-}
-
-function PostCard({ p, onOpen, onPublish }: { p: Post; onOpen: () => void; onPublish: () => void }) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-stroke bg-ink transition hover:border-accent/50">
-      <button onClick={onOpen} className="block w-full">
-        <video src={p.videoUrl} preload="metadata" className="aspect-[9/16] w-full bg-black object-cover" />
-      </button>
-      <div className="p-2">
-        <p className="truncate text-xs font-semibold">{p.name}</p>
-        <p className="truncate text-[11px] text-muted">{p.caption || "No caption yet"}</p>
-        <div className="mt-1.5 flex justify-between text-[11px]">
-          <button onClick={onOpen} className="font-semibold text-accent hover:underline">Edit details</button>
-          <button onClick={onPublish} className="text-muted hover:text-fg">Post now</button>
-        </div>
-      </div>
-    </div>
   );
 }

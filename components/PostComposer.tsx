@@ -126,7 +126,7 @@ export default function PostComposer({
                 type="checkbox"
                 checked={val}
                 onChange={(e) => set(e.target.checked)}
-                className="accent-[#547dcc]"
+                className="accent-[#4E5B3A]"
               />
               {label}
             </label>
@@ -139,7 +139,7 @@ export default function PostComposer({
               type="checkbox"
               checked={commercial}
               onChange={(e) => setCommercial(e.target.checked)}
-              className="accent-[#547dcc]"
+              className="accent-[#4E5B3A]"
             />
             Disclose commercial content
           </label>
@@ -153,7 +153,7 @@ export default function PostComposer({
                   type="checkbox"
                   checked={yourBrand}
                   onChange={(e) => setYourBrand(e.target.checked)}
-                  className="accent-[#547dcc]"
+                  className="accent-[#4E5B3A]"
                 />
                 Your brand — promoting your own business
               </label>
@@ -162,7 +162,7 @@ export default function PostComposer({
                   type="checkbox"
                   checked={brandedContent}
                   onChange={(e) => setBrandedContent(e.target.checked)}
-                  className="accent-[#547dcc]"
+                  className="accent-[#4E5B3A]"
                 />
                 Branded content — paid partnership with another brand
               </label>
