@@ -367,7 +367,7 @@ export default function Dashboard() {
 
               <div className={`${card} flex items-center gap-3 px-5 py-4`}>
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                <p className="text-[12px] text-muted">Scheduler active · checks every 5 minutes{running ? " · running now" : ""}</p>
+                <p className="text-[12px] text-muted">Scheduler active · checks every 30 minutes{running ? " · running now" : ""}</p>
               </div>
             </aside>
           </div>
