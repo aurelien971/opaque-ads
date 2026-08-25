@@ -16,6 +16,9 @@ Two kinds of post are supported:
   domain via `/api/media/<storage path>` and the request carries
   `auto_add_music: true` — TikTok picks a licensed track and attaches it, which
   is the only way a slideshow can have sound (a JPEG can't carry audio).
+  **`auto_add_music` only applies in `DIRECT_POST`.** While `TIKTOK_POST_MODE=inbox`
+  the photo init takes title + description only, the slideshow lands in the
+  account's drafts, and the sound is picked there by hand.
 
 The Opaque Ads Mac app writes straight into this same `posts` collection
 (`source: "opaque-ads"`), so generated creatives ride the same clock.

@@ -169,16 +169,18 @@ export async function publishPhotos(
   const [title, ...rest] = opts.caption.split("\n");
   const description = (rest.join("\n") || opts.caption).slice(0, 4000);
 
-  // Music is the point of a slideshow — on unless explicitly turned off.
-  const autoAddMusic = opts.autoAddMusic !== false;
-
+  // Music is the point of a slideshow — on unless explicitly turned off. TikTok
+  // only honours auto_add_music (and disable_comment / the brand toggles) in
+  // DIRECT_POST; MEDIA_UPLOAD takes title + description and nothing else, so
+  // sending more there risks the whole init being refused. Until the app is
+  // audited, a slideshow lands in the drafts and the account picks its own sound.
   const post_info = direct
     ? {
         title: title.slice(0, 90),
         description,
         privacy_level: opts.privacy,
         disable_comment: !opts.allowComments,
-        auto_add_music: autoAddMusic,
+        auto_add_music: opts.autoAddMusic !== false,
         ...(opts.commercial
           ? {
               brand_content_toggle: !!opts.brandedContent,
@@ -186,7 +188,7 @@ export async function publishPhotos(
             }
           : {}),
       }
-    : { title: title.slice(0, 90), description, auto_add_music: autoAddMusic };
+    : { title: title.slice(0, 90), description };
 
   const init = await tt<{ publish_id: string }>("/post/publish/content/init/", token, {
     media_type: "PHOTO",
