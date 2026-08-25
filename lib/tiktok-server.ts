@@ -28,6 +28,10 @@ export type PostOptions = {
   brandedContent?: boolean;
   // Photo posts only: let TikTok pick and attach a soundtrack automatically.
   autoAddMusic?: boolean;
+  // Declares the media as AI-generated. TikTok requires realistic AI-made or
+  // AI-edited people/scenes to carry this label; undeclared AIGC is one of the
+  // things that makes a post ineligible for the For You feed (and unpromotable).
+  aigc?: boolean;
 };
 
 // Public base for media TikTok has to pull from. Must be a domain verified in
@@ -122,6 +126,7 @@ export async function publishVideo(
             disable_comment: !opts.allowComments,
             disable_duet: !opts.allowDuet,
             disable_stitch: !opts.allowStitch,
+            ...(opts.aigc ? { is_aigc: true } : {}),
             ...(opts.commercial
               ? {
                   brand_content_toggle: !!opts.brandedContent,
@@ -193,6 +198,8 @@ export async function publishPhotos(
   const init = await tt<{ publish_id: string }>("/post/publish/content/init/", token, {
     media_type: "PHOTO",
     post_mode: direct ? "DIRECT_POST" : "MEDIA_UPLOAD",
+    // Body-level for photos (not a post_info field), so it survives MEDIA_UPLOAD.
+    ...(opts.aigc ? { is_aigc: true } : {}),
     post_info,
     source_info: {
       source: "PULL_FROM_URL",

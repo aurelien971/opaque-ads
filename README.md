@@ -20,6 +20,11 @@ Two kinds of post are supported:
   the photo init takes title + description only, the slideshow lands in the
   account's drafts, and the sound is picked there by hand.
 
+Every post carries `is_aigc` (TikTok's AI-generated label) unless a post sets
+`aigc: false`. This pipeline produces AI-edited pictures of real-looking people,
+which TikTok requires to be disclosed — and undeclared AIGC is one of the things
+that makes a post ineligible for the For You feed, and therefore unpromotable.
+
 The Opaque Ads Mac app writes straight into this same `posts` collection
 (`source: "opaque-ads"`), so generated creatives ride the same clock.
 
@@ -72,4 +77,5 @@ Redeploy. Every `git push` deploys.
 `posts/{id}` — `{ uid, name, caption, hashtags, status: draft|scheduled|posted|failed, dueAt, privacy, publishId, postedAt, mode, tiktokVideoId, stats }`
  · videos add `{ videoUrl, storagePath }`
  · slideshows add `{ mediaType: "PHOTO", photoUrls[], photoPaths[], autoAddMusic }`
+ · every post may set `aigc` (default true → `is_aigc` on the TikTok call)
  · creatives pushed from the Mac app add `{ source: "opaque-ads", template, adId, runId }`

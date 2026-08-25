@@ -31,6 +31,8 @@ export type Post = {
   photoUrls?: string[];
   photoPaths?: string[];
   autoAddMusic?: boolean;
+  /** Declare the media as AI-generated (TikTok's AIGC label). Defaults to on. */
+  aigc?: boolean;
   // Where the creative came from ("opaque-ads" = pushed by the Mac generator)
   // and which template made it — so results can be scored per template.
   source?: string;

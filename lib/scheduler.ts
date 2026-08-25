@@ -55,6 +55,9 @@ export async function publishPost(postId: string, opts?: Partial<PostOptions>) {
     commercial: opts?.commercial ?? p.commercial ?? false,
     yourBrand: opts?.yourBrand ?? p.yourBrand ?? false,
     brandedContent: opts?.brandedContent ?? p.brandedContent ?? false,
+    // Everything this pipeline makes is AI-edited imagery, so the label is on
+    // unless a post explicitly opts out.
+    aigc: opts?.aigc ?? p.aigc !== false,
   };
   // Slideshows go through the photo endpoint (TikTok pulls the slides from our
   // verified domain and attaches a soundtrack itself); videos go through upload.
