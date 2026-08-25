@@ -6,6 +6,8 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "./admin";
 import {
   ensureFreshToken,
+  mediaUrl,
+  publishPhotos,
   publishStatus,
   publishVideo,
   videoStats,
@@ -54,8 +56,19 @@ export async function publishPost(postId: string, opts?: Partial<PostOptions>) {
     yourBrand: opts?.yourBrand ?? p.yourBrand ?? false,
     brandedContent: opts?.brandedContent ?? p.brandedContent ?? false,
   };
+  // Slideshows go through the photo endpoint (TikTok pulls the slides from our
+  // verified domain and attaches a soundtrack itself); videos go through upload.
+  const isPhoto = p.mediaType === "PHOTO";
   try {
-    const publishId = await publishVideo(conn.accessToken, p.videoUrl, options);
+    const publishId = isPhoto
+      ? await publishPhotos(
+          conn.accessToken,
+          ((p.photoPaths as string[] | undefined) ?? []).length
+            ? (p.photoPaths as string[]).map(mediaUrl)
+            : ((p.photoUrls as string[] | undefined) ?? []),
+          { ...options, autoAddMusic: opts?.autoAddMusic ?? p.autoAddMusic !== false },
+        )
+      : await publishVideo(conn.accessToken, p.videoUrl, options);
     await ref.update({
       status: "posted",
       dueAt: null,

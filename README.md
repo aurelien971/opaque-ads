@@ -7,6 +7,19 @@ Schedule your TikTok videos; they post themselves. Next.js 15 + Firebase
 hour → the calendar fills → the scheduler publishes each video when due →
 results (views/likes/comments/shares) come back into the dashboard.
 
+Two kinds of post are supported:
+
+- **Videos** — uploaded to TikTok with `FILE_UPLOAD` (the file is pushed from
+  the server, so the host doesn't matter).
+- **Slideshows** — `mediaType: "PHOTO"` with a list of slides. TikTok only
+  accepts `PULL_FROM_URL` for photos, so each slide is served from *this*
+  domain via `/api/media/<storage path>` and the request carries
+  `auto_add_music: true` — TikTok picks a licensed track and attaches it, which
+  is the only way a slideshow can have sound (a JPEG can't carry audio).
+
+The Opaque Ads Mac app writes straight into this same `posts` collection
+(`source: "opaque-ads"`), so generated creatives ride the same clock.
+
 ## Run locally
 ```bash
 cp .env.example .env.local   # fill it in
@@ -33,6 +46,12 @@ npm install && npm run dev
   `TIKTOK_CLIENT_SECRET`. Keep `TIKTOK_POST_MODE=inbox` until the app is
   audited (unaudited apps can only deliver to the user's TikTok inbox/drafts).
 - Add test users (Sandbox → Target users) for any TikTok account you'll test with.
+- **URL Ownership Verification** (required for slideshows): add the property
+  `https://www.oaisislabs.com/` and verify it with the txt file already in
+  `public/`. Photo posts are pulled by TikTok from `/api/media/…` on this
+  domain — without the verified prefix, TikTok refuses the pull.
+- `NEXT_PUBLIC_SITE_URL` must match the verified domain (defaults to
+  `https://www.oaisislabs.com`).
 
 ### 3. Scheduler clock
 - `CRON_SECRET` = any long random string.
@@ -47,4 +66,7 @@ Redeploy. Every `git push` deploys.
 
 ## Data model
 `users/{uid}` — `{ email, tiktok: { openId, displayName, accessToken, refreshToken, expiresAt, scope } }`
-`posts/{id}` — `{ uid, name, caption, videoUrl, storagePath, status: draft|scheduled|posted|failed, dueAt, privacy, publishId, postedAt, mode, tiktokVideoId, stats }`
+`posts/{id}` — `{ uid, name, caption, hashtags, status: draft|scheduled|posted|failed, dueAt, privacy, publishId, postedAt, mode, tiktokVideoId, stats }`
+ · videos add `{ videoUrl, storagePath }`
+ · slideshows add `{ mediaType: "PHOTO", photoUrls[], photoPaths[], autoAddMusic }`
+ · creatives pushed from the Mac app add `{ source: "opaque-ads", template, adId, runId }`

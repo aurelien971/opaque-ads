@@ -25,6 +25,16 @@ export type Post = {
   videoUrl: string;
   storagePath: string;
   status: "draft" | "scheduled" | "posted" | "failed";
+  // Slideshows: mediaType "PHOTO" + the slides. photoPaths are storage paths —
+  // the server turns them into URLs on the verified domain for TikTok to pull.
+  mediaType?: "VIDEO" | "PHOTO";
+  photoUrls?: string[];
+  photoPaths?: string[];
+  autoAddMusic?: boolean;
+  // Where the creative came from ("opaque-ads" = pushed by the Mac generator)
+  // and which template made it — so results can be scored per template.
+  source?: string;
+  template?: string;
   hashtags?: string;
   privacy?: string;
   allowComments?: boolean;

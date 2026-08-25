@@ -22,6 +22,23 @@ const PRIVACY_LABEL: Record<string, string> = { PUBLIC_TO_EVERYONE: "Public", MU
 
 const card = "rounded-[20px] border border-[rgba(22,21,15,0.08)] bg-surface";
 
+// One creative's thumbnail — a video frame, or the cover slide of a slideshow.
+function Thumb({ post, className }: { post: Post; className: string }) {
+  if (post.mediaType === "PHOTO") {
+    const cover = post.photoUrls?.[0];
+    return (
+      <span className={`relative block shrink-0 overflow-hidden bg-[#16150F] ${className}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {cover && <img src={cover} alt="" className="h-full w-full object-cover" />}
+        <span className="absolute left-1 top-1 rounded-full bg-[#F4F1EA]/90 px-1.5 py-px font-mono text-[9px] text-fg">
+          {post.photoUrls?.length ?? 0}
+        </span>
+      </span>
+    );
+  }
+  return <video src={post.videoUrl} preload="metadata" className={`shrink-0 bg-[#16150F] object-cover ${className}`} />;
+}
+
 export default function Dashboard() {
   const { user, loading } = useRequireAuth();
   const [connection, setConnection] = useState<TikTokConnection | null>(null);
@@ -205,7 +222,7 @@ export default function Dashboard() {
                         <div className={`${card} divide-y divide-[rgba(22,21,15,0.08)]`}>
                           {items.map((p) => (
                             <button key={p.id} onClick={() => setEditing(p)} className="flex w-full items-center gap-4 px-4 py-3 text-left transition hover:bg-ink/60">
-                              <video src={p.videoUrl} preload="metadata" className="h-14 w-9 rounded-lg bg-[#16150F] object-cover" />
+                              <Thumb post={p} className="h-14 w-9 rounded-lg" />
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-[14px] font-medium">{p.caption || <span className="font-normal text-faint">No caption yet</span>}</p>
                                 <p className="mono-sm mt-0.5 truncate">{p.name}{p.hashtags ? ` · ${p.hashtags}` : ""} · {PRIVACY_LABEL[p.privacy ?? "SELF_ONLY"]}</p>
@@ -248,7 +265,7 @@ export default function Dashboard() {
                   </button>
                   {drafts.map((p) => (
                     <button key={p.id} onClick={() => setEditing(p)} className="group relative aspect-[9/14] overflow-hidden rounded-[12px] bg-[#16150F] text-left">
-                      <video src={p.videoUrl} preload="metadata" className="h-full w-full object-cover transition group-hover:opacity-80" />
+                      <Thumb post={p} className="h-full w-full transition group-hover:opacity-80" />
                       <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6 text-[11px] text-[#F4F1EA]">{p.caption || p.name}</span>
                     </button>
                   ))}

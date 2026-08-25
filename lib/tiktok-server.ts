@@ -26,7 +26,18 @@ export type PostOptions = {
   commercial?: boolean;
   yourBrand?: boolean;
   brandedContent?: boolean;
+  // Photo posts only: let TikTok pick and attach a soundtrack automatically.
+  autoAddMusic?: boolean;
 };
+
+// Public base for media TikTok has to pull from. Must be a domain verified in
+// the TikTok developer portal (URL Ownership Verification) — Storage URLs are not.
+export const siteBase = () =>
+  (process.env.NEXT_PUBLIC_SITE_URL || "https://www.oaisislabs.com").replace(/\/$/, "");
+
+// A storage object path → a URL on our verified domain (see app/api/media).
+export const mediaUrl = (storagePath: string) =>
+  `${siteBase()}/api/media/${storagePath.split("/").map(encodeURIComponent).join("/")}`;
 
 const clientKey = () =>
   process.env.TIKTOK_CLIENT_KEY ?? process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY ?? "";
@@ -139,6 +150,54 @@ export async function publishVideo(
   if (!put.ok && put.status !== 201) {
     throw new Error(`Upload to TikTok failed (${put.status}).`);
   }
+  return init.publish_id;
+}
+
+// Slideshow (photo carousel). TikTok only accepts PULL_FROM_URL here, so the
+// images must sit on a verified domain — pass URLs built with mediaUrl().
+// `autoAddMusic` is the API's own "put a soundtrack on it" switch: TikTok picks a
+// track from its licensed library, exactly like the in-app slideshow editor.
+export async function publishPhotos(
+  token: string,
+  photoUrls: string[],
+  opts: PostOptions,
+): Promise<string> {
+  if (!photoUrls.length) throw new Error("No slides to post.");
+  if (photoUrls.length > 35) throw new Error("TikTok allows at most 35 slides.");
+
+  const direct = process.env.TIKTOK_POST_MODE === "direct";
+  const [title, ...rest] = opts.caption.split("\n");
+  const description = (rest.join("\n") || opts.caption).slice(0, 4000);
+
+  // Music is the point of a slideshow — on unless explicitly turned off.
+  const autoAddMusic = opts.autoAddMusic !== false;
+
+  const post_info = direct
+    ? {
+        title: title.slice(0, 90),
+        description,
+        privacy_level: opts.privacy,
+        disable_comment: !opts.allowComments,
+        auto_add_music: autoAddMusic,
+        ...(opts.commercial
+          ? {
+              brand_content_toggle: !!opts.brandedContent,
+              brand_organic_toggle: !!opts.yourBrand,
+            }
+          : {}),
+      }
+    : { title: title.slice(0, 90), description, auto_add_music: autoAddMusic };
+
+  const init = await tt<{ publish_id: string }>("/post/publish/content/init/", token, {
+    media_type: "PHOTO",
+    post_mode: direct ? "DIRECT_POST" : "MEDIA_UPLOAD",
+    post_info,
+    source_info: {
+      source: "PULL_FROM_URL",
+      photo_cover_index: 0,
+      photo_images: photoUrls,
+    },
+  });
   return init.publish_id;
 }
 

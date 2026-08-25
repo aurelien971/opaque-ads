@@ -85,7 +85,21 @@ export default function PostEditor({
         </div>
 
         <div className="grid gap-6 p-6 sm:grid-cols-[160px_1fr]">
-          <video src={post.videoUrl} controls preload="metadata" className="aspect-[9/16] w-full rounded-xl bg-black object-contain" />
+          {post.mediaType === "PHOTO" ? (
+            <div className="flex gap-2 overflow-x-auto rounded-xl bg-black p-2">
+              {(post.photoUrls ?? []).map((u, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={u} alt={`Slide ${i + 1}`} className="aspect-[9/16] w-[46%] shrink-0 rounded-lg object-cover" />
+              ))}
+            </div>
+          ) : (
+            <video src={post.videoUrl} controls preload="metadata" className="aspect-[9/16] w-full rounded-xl bg-black object-contain" />
+          )}
+          {post.mediaType === "PHOTO" && (
+            <p className="mt-2 text-[12px] text-faint">
+              Slideshow · {(post.photoUrls ?? []).length} slides · TikTok adds a soundtrack automatically.
+            </p>
+          )}
 
           <div className="space-y-5">
             <div>
