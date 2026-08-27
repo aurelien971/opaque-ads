@@ -225,7 +225,7 @@ export default function Dashboard() {
                               <Thumb post={p} className="h-14 w-9 rounded-lg" />
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-[14px] font-medium">{p.caption || <span className="font-normal text-faint">No caption yet</span>}</p>
-                                <p className="mono-sm mt-0.5 truncate">{p.name}{p.hashtags ? ` · ${p.hashtags}` : ""} · {PRIVACY_LABEL[p.privacy ?? "SELF_ONLY"]}</p>
+                                <p className="mono-sm mt-0.5 truncate">{p.name}{p.hashtags ? ` · ${p.hashtags}` : ""} · {PRIVACY_LABEL[p.privacy ?? "PUBLIC_TO_EVERYONE"]}</p>
                               </div>
                               <span className="font-mono text-[12px] tabular-nums">{hm(p.dueAt?.toDate())}</span>
                             </button>

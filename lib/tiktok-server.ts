@@ -95,6 +95,54 @@ async function tt<T = Record<string, unknown>>(
   return data.data as T;
 }
 
+// What the account itself allows. TikTok requires this to be queried before a
+// DIRECT_POST and the answer respected: a private account cannot post publicly,
+// and comment/duet/stitch may be switched off account-wide. Posting against a
+// level the account doesn't offer is rejected outright, so this is not optional.
+export type CreatorInfo = {
+  creator_nickname: string;
+  creator_username: string;
+  privacy_level_options: string[];
+  comment_disabled: boolean;
+  duet_disabled: boolean;
+  stitch_disabled: boolean;
+  max_video_post_duration_sec: number;
+};
+
+export async function creatorInfo(token: string): Promise<CreatorInfo> {
+  const res = await fetch(`${API}/post/publish/creator_info/query/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+  });
+  const data = await res.json();
+  if (!res.ok || (data.error?.code && data.error.code !== "ok")) {
+    throw new Error(data.error?.message ?? `TikTok creator_info failed (${res.status})`);
+  }
+  return data.data as CreatorInfo;
+}
+
+/**
+ * Narrows a post's options to what this account actually permits.
+ * Falls back to the account's own first allowed privacy level when the one we
+ * wanted isn't on offer — better a post that lands than one TikTok refuses.
+ */
+export function clampToCreator(opts: PostOptions, info: CreatorInfo): PostOptions {
+  const levels = info.privacy_level_options ?? [];
+  const privacy = levels.includes(opts.privacy)
+    ? opts.privacy
+    : levels.find((l) => l === "PUBLIC_TO_EVERYONE") ?? levels[0] ?? opts.privacy;
+  return {
+    ...opts,
+    privacy,
+    allowComments: opts.allowComments && !info.comment_disabled,
+    allowDuet: opts.allowDuet && !info.duet_disabled,
+    allowStitch: opts.allowStitch && !info.stitch_disabled,
+  };
+}
+
 // Uploads a video from a URL we can read (the user's Storage file) into the
 // user's TikTok — inbox draft or direct post. Returns TikTok's publish_id.
 export async function publishVideo(

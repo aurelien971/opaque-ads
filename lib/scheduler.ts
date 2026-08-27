@@ -5,6 +5,8 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "./admin";
 import {
+  clampToCreator,
+  creatorInfo,
   ensureFreshToken,
   mediaUrl,
   publishPhotos,
@@ -42,13 +44,15 @@ export async function publishPost(postId: string, opts?: Partial<PostOptions>) {
   if (!p) throw new Error("Post not found.");
   const conn = await connectionFor(p.uid);
   if (!conn) throw new Error("TikTok is not connected.");
-  const options: PostOptions = {
+  let options: PostOptions = {
     caption:
       opts?.caption ??
       [p.caption, p.hashtags ? String(p.hashtags).split(/[\s,]+/).filter(Boolean).map((t: string) => (t.startsWith("#") ? t : `#${t}`)).join(" ") : ""]
         .filter(Boolean)
         .join(" "),
-    privacy: opts?.privacy ?? p.privacy ?? "SELF_ONLY",
+    // Public is the point of the product now that the app is audited. A post
+    // that explicitly chose another level keeps it.
+    privacy: opts?.privacy ?? p.privacy ?? "PUBLIC_TO_EVERYONE",
     allowComments: opts?.allowComments ?? p.allowComments ?? true,
     allowDuet: opts?.allowDuet ?? p.allowDuet ?? true,
     allowStitch: opts?.allowStitch ?? p.allowStitch ?? true,
@@ -59,6 +63,17 @@ export async function publishPost(postId: string, opts?: Partial<PostOptions>) {
     // unless a post explicitly opts out.
     aigc: opts?.aigc ?? p.aigc !== false,
   };
+  // Direct posting is bound by what the account itself allows — ask, then
+  // narrow. A private account can't post publicly, and comment/duet/stitch can
+  // be off account-wide; posting against a level TikTok doesn't offer fails.
+  if (process.env.TIKTOK_POST_MODE === "direct") {
+    try {
+      options = clampToCreator(options, await creatorInfo(conn.accessToken));
+    } catch {
+      /* creator_info unavailable — post with what we have rather than stall */
+    }
+  }
+
   // Slideshows go through the photo endpoint (TikTok pulls the slides from our
   // verified domain and attaches a soundtrack itself); videos go through upload.
   const isPhoto = p.mediaType === "PHOTO";

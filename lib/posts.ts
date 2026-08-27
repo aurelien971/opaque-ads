@@ -93,7 +93,7 @@ export async function uploadPost(uid: string, file: File, onProgress: (pct: numb
     videoUrl,
     storagePath: path,
     status: "draft",
-    privacy: "SELF_ONLY",
+    privacy: "PUBLIC_TO_EVERYONE",
     dueAt: null,
     createdAt: serverTimestamp(),
   });

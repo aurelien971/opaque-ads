@@ -23,7 +23,7 @@ export default function PostEditor({
 }) {
   const [caption, setCaption] = useState(post.caption ?? "");
   const [hashtags, setHashtags] = useState(post.hashtags ?? "");
-  const [privacy, setPrivacy] = useState(post.privacy ?? "SELF_ONLY");
+  const [privacy, setPrivacy] = useState(post.privacy ?? "PUBLIC_TO_EVERYONE");
   const [allowComments, setAllowComments] = useState(post.allowComments ?? true);
   const [allowDuet, setAllowDuet] = useState(post.allowDuet ?? true);
   const [allowStitch, setAllowStitch] = useState(post.allowStitch ?? true);
