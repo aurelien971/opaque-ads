@@ -93,7 +93,6 @@ export async function uploadPost(uid: string, file: File, onProgress: (pct: numb
     videoUrl,
     storagePath: path,
     status: "draft",
-    privacy: "PUBLIC_TO_EVERYONE",
     dueAt: null,
     createdAt: serverTimestamp(),
   });
@@ -157,7 +156,6 @@ export async function uploadSlideshow(
     videoUrl: "",
     storagePath: photoPaths[0],
     status: "draft",
-    privacy: "PUBLIC_TO_EVERYONE",
     dueAt: null,
     createdAt: serverTimestamp(),
   });

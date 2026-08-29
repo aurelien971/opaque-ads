@@ -32,7 +32,9 @@ export default function PostEditor({
 }) {
   const [caption, setCaption] = useState(post.caption ?? "");
   const [hashtags, setHashtags] = useState(post.hashtags ?? "");
-  const [privacy, setPrivacy] = useState(post.privacy ?? "PUBLIC_TO_EVERYONE");
+  // Deliberately empty until chosen: TikTok's UX rules forbid pre-selecting a
+  // privacy level, and nothing may be published before one is picked.
+  const [privacy, setPrivacy] = useState(post.privacy ?? "");
   const [allowComments, setAllowComments] = useState(post.allowComments ?? true);
   const [allowDuet, setAllowDuet] = useState(post.allowDuet ?? true);
   const [allowStitch, setAllowStitch] = useState(post.allowStitch ?? true);
@@ -44,7 +46,7 @@ export default function PostEditor({
   const [posting, setPosting] = useState(false);
 
   useEffect(() => {
-    if (brandedContent && privacy === "SELF_ONLY") setPrivacy("PUBLIC_TO_EVERYONE");
+    if (brandedContent && privacy === "SELF_ONLY") setPrivacy("");
   }, [brandedContent, privacy]);
 
   const isScheduled = post.status === "scheduled";
@@ -54,7 +56,7 @@ export default function PostEditor({
     const fields: Partial<Post> = {
       caption,
       hashtags,
-      privacy,
+      ...(privacy ? { privacy } : {}),
       allowComments,
       allowDuet,
       allowStitch,
@@ -84,6 +86,7 @@ export default function PostEditor({
   }
 
   const isPhoto = post.mediaType === "PHOTO";
+  const canPost = !!privacy;
   const lastStep = !step || step.index === step.total - 1;
 
   const cleanTags = hashtags
@@ -163,10 +166,14 @@ export default function PostEditor({
                 onChange={(e) => setPrivacy(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stroke bg-ink px-3 py-2 text-sm outline-none focus:border-accent"
               >
+                <option value="" disabled>Choose who can see this…</option>
                 {Object.entries(PRIVACY_LEVELS).map(([k, l]) => (
                   <option key={k} value={k} disabled={brandedContent && k === "SELF_ONLY"}>{l}</option>
                 ))}
               </select>
+              {!privacy && (
+                <p className="mt-1 text-[11px] text-muted">Pick one before posting — nothing is chosen for you.</p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-4 text-sm">
@@ -223,8 +230,9 @@ export default function PostEditor({
             {post.status !== "posted" && (
               <button
                 onClick={postNow}
-                disabled={posting}
-                className="glass-bright rounded-full px-6 py-2.5 text-sm font-semibold disabled:opacity-60"
+                disabled={posting || !canPost}
+                title={canPost ? undefined : "Choose who can see this first"}
+                className="glass-bright rounded-full px-6 py-2.5 text-sm font-semibold disabled:opacity-40"
               >
                 {posting ? "Posting…" : "Post now"}
               </button>
