@@ -15,7 +15,7 @@ import type { TikTokVideo } from "@/lib/tiktok-server";
 import { db } from "@/lib/firebase";
 import { useRequireAuth } from "@/lib/auth";
 import { buildAuthUrl, tiktokClientKey, type TikTokConnection } from "@/lib/tiktok";
-import { autoSchedule, scheduleAt, smartSchedule, uploadPost, watchPosts, type Post } from "@/lib/posts";
+import { autoSchedule, scheduleAt, smartSchedule, uploadPost, uploadSlideshow, watchPosts, type Post } from "@/lib/posts";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 const PRIVACY_LABEL: Record<string, string> = { PUBLIC_TO_EVERYONE: "Public", MUTUAL_FOLLOW_FRIENDS: "Friends", FOLLOWER_OF_CREATOR: "Followers", SELF_ONLY: "Only me" };
@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [videos, setVideos] = useState<TikTokVideo[]>([]);
   const [more, setMore] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const slideInput = useRef<HTMLInputElement>(null);
 
   // Custom cadence
   const [days, setDays] = useState<number[]>([2, 4, 6]);
@@ -101,6 +102,24 @@ export default function Dashboard() {
       setUploading({ done: i, total: list.length, pct: 0 });
       try { await uploadPost(user!.uid, list[i], (pct) => setUploading({ done: i, total: list.length, pct })); }
       catch (e) { setNotice(`Upload failed for ${list[i].name}: ${e instanceof Error ? e.message : "unknown error"}`); }
+    }
+    setUploading(null);
+  }
+  // Every image dropped here becomes ONE slideshow post, in the order chosen —
+  // unlike videos, where each file is its own post.
+  async function onSlides(files: FileList | null) {
+    if (!files?.length) return;
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (list.length < 2) {
+      setNotice("Pick at least 2 images — a slideshow needs more than one slide.");
+      return;
+    }
+    setUploading({ done: 0, total: list.length, pct: 0 });
+    try {
+      await uploadSlideshow(user!.uid, list, (done, pct) => setUploading({ done, total: list.length, pct }));
+      setNotice(`Slideshow added — ${list.length} slides, with TikTok's auto-music on. Click it to write the caption.`);
+    } catch (e) {
+      setNotice(`Slideshow failed: ${e instanceof Error ? e.message : "unknown error"}`);
     }
     setUploading(null);
   }
@@ -241,9 +260,19 @@ export default function Dashboard() {
               <section>
                 <div className="flex items-end justify-between">
                   <h2 className="serif text-[28px]">Drafts</h2>
-                  <span className="mono-sm">{drafts.length} waiting</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => slideInput.current?.click()}
+                      disabled={!!uploading}
+                      className="rounded-full border border-[rgba(22,21,15,0.18)] px-3.5 py-1.5 text-[12.5px] font-medium transition hover:border-fg disabled:opacity-40"
+                    >
+                      + New slideshow
+                    </button>
+                    <span className="mono-sm">{drafts.length} waiting</span>
+                  </div>
                 </div>
                 <input ref={fileInput} type="file" accept="video/mp4,video/quicktime" multiple hidden onChange={(e) => onUpload(e.target.files)} />
+                <input ref={slideInput} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { onSlides(e.target.files); e.target.value = ""; }} />
                 <div
                   onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
                   onDragLeave={() => setDragging(false)}
@@ -270,7 +299,7 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-[12px] text-faint">MP4 or MOV, up to 64 MB each. Click a draft to add its caption, hashtags and privacy.</p>
+                <p className="mt-2 text-[12px] text-faint">Videos: MP4 or MOV, up to 64 MB each — one post per file. Slideshows: 2–35 images, all of them one post, with TikTok’s auto-music on. Click a draft to add its caption, hashtags and privacy.</p>
               </section>
 
               {/* Sent */}

@@ -99,15 +99,82 @@ export async function uploadPost(uid: string, file: File, onProgress: (pct: numb
   });
 }
 
+/**
+ * A slideshow: several images become one PHOTO post.
+ *
+ * TikTok pulls photo slides from a URL rather than accepting an upload, and the
+ * prefix has to be a domain verified in the developer portal — so we keep the
+ * storage *paths* and let the server turn them into /api/media URLs at publish
+ * time. photoUrls are the Storage download links, used only for previews here.
+ *
+ * autoAddMusic is on by default: TikTok picks a track from its own licensed
+ * library, exactly like the in-app slideshow editor. It's honoured on direct
+ * posts only — an inbox draft lets the account choose its own sound.
+ */
+export async function uploadSlideshow(
+  uid: string,
+  files: File[],
+  onProgress: (done: number, pct: number) => void,
+) {
+  if (files.length < 2) throw new Error("A slideshow needs at least 2 images.");
+  if (files.length > 35) throw new Error("TikTok allows at most 35 slides.");
+
+  const stamp = Date.now();
+  const photoPaths: string[] = [];
+  const photoUrls: string[] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    // Zero-padded so the slides sort in the order they were chosen.
+    const path = `users/${uid}/photos/${stamp}_${String(i).padStart(2, "0")}_${file.name}`;
+    const task = uploadBytesResumable(ref(storage, path), file, {
+      contentType: file.type || "image/jpeg",
+    });
+    await new Promise<void>((resolve, reject) => {
+      task.on(
+        "state_changed",
+        (s) => onProgress(i, Math.round((s.bytesTransferred / s.totalBytes) * 100)),
+        reject,
+        () => resolve(),
+      );
+    });
+    photoPaths.push(path);
+    photoUrls.push(await getDownloadURL(task.snapshot.ref));
+  }
+
+  await addDoc(collection(db, "posts"), {
+    uid,
+    name: `Slideshow · ${files.length} slides`,
+    caption: "",
+    mediaType: "PHOTO",
+    photoPaths,
+    photoUrls,
+    autoAddMusic: true,
+    // Kept so the shared Post shape stays valid; unused for photo posts.
+    videoUrl: "",
+    storagePath: photoPaths[0],
+    status: "draft",
+    privacy: "PUBLIC_TO_EVERYONE",
+    dueAt: null,
+    createdAt: serverTimestamp(),
+  });
+}
+
 export const updatePost = (id: string, fields: Partial<Post>) =>
   updateDoc(doc(db, "posts", id), fields);
 
 export async function deletePost(p: Post) {
-  try {
-    await deleteObject(ref(storage, p.storagePath));
-  } catch {
-    /* file already gone */
-  }
+  // A slideshow owns every slide, not just the cover.
+  const paths = p.mediaType === "PHOTO" ? (p.photoPaths ?? []) : [p.storagePath];
+  await Promise.all(
+    paths.filter(Boolean).map(async (path) => {
+      try {
+        await deleteObject(ref(storage, path));
+      } catch {
+        /* file already gone */
+      }
+    }),
+  );
   await deleteDoc(doc(db, "posts", p.id));
 }
 
