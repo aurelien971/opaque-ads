@@ -247,9 +247,9 @@ export default function PostEditor({
               <label className="text-xs font-semibold text-muted">WHO CAN INTERACT</label>
               <div className="mt-1 flex flex-wrap gap-4 text-sm">
                 {([
-                  ["Comments", allowComments, setAllowComments, creator?.comment_disabled],
-                  ["Duet", allowDuet, setAllowDuet, isPhoto || creator?.duet_disabled],
-                  ["Stitch", allowStitch, setAllowStitch, isPhoto || creator?.stitch_disabled],
+                  ["Comments", allowComments, setAllowComments, creator?.comment_disabled ? "off for this account" : ""],
+                  ["Duet", allowDuet, setAllowDuet, isPhoto ? "not on photo posts" : creator?.duet_disabled ? "off for this account" : ""],
+                  ["Stitch", allowStitch, setAllowStitch, isPhoto ? "not on photo posts" : creator?.stitch_disabled ? "off for this account" : ""],
                 ] as const).map(([l, v, set, off]) => (
                   <label key={l} className={`flex items-center gap-2 ${off ? "opacity-40" : ""}`}>
                     <input
@@ -260,7 +260,7 @@ export default function PostEditor({
                       className="accent-[#4E5B3A]"
                     />
                     {l}
-                    {off && <span className="text-[11px] text-muted">(off for this account)</span>}
+                    {off && <span className="text-[11px] text-muted">({off})</span>}
                   </label>
                 ))}
               </div>
