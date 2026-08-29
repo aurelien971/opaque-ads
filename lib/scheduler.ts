@@ -7,7 +7,9 @@ import { adminDb } from "./admin";
 import {
   clampToCreator,
   creatorInfo,
+  defaultMode,
   ensureFreshToken,
+  isUnauditedForDirect,
   mediaUrl,
   publishPhotos,
   publishStatus,
@@ -15,6 +17,7 @@ import {
   videoStats,
   userProfile,
   listVideos,
+  type PostMode,
   type PostOptions,
   type StoredConnection,
   type VideoStats,
@@ -77,22 +80,36 @@ export async function publishPost(postId: string, opts?: Partial<PostOptions>) {
   // Slideshows go through the photo endpoint (TikTok pulls the slides from our
   // verified domain and attaches a soundtrack itself); videos go through upload.
   const isPhoto = p.mediaType === "PHOTO";
+  const photoUrls = ((p.photoPaths as string[] | undefined) ?? []).length
+    ? (p.photoPaths as string[]).map(mediaUrl)
+    : ((p.photoUrls as string[] | undefined) ?? []);
+  const photoOpts = { ...options, autoAddMusic: opts?.autoAddMusic ?? p.autoAddMusic !== false };
+
+  const send = (mode: PostMode) =>
+    isPhoto
+      ? publishPhotos(conn.accessToken, photoUrls, photoOpts, mode)
+      : publishVideo(conn.accessToken, p.videoUrl, options, mode);
+
+  let mode = defaultMode();
   try {
-    const publishId = isPhoto
-      ? await publishPhotos(
-          conn.accessToken,
-          ((p.photoPaths as string[] | undefined) ?? []).length
-            ? (p.photoPaths as string[]).map(mediaUrl)
-            : ((p.photoUrls as string[] | undefined) ?? []),
-          { ...options, autoAddMusic: opts?.autoAddMusic ?? p.autoAddMusic !== false },
-        )
-      : await publishVideo(conn.accessToken, p.videoUrl, options);
+    let publishId: string;
+    try {
+      publishId = await send(mode);
+    } catch (e) {
+      // Asking for a direct post before the Direct Post audit has been granted
+      // is refused outright — the app being Live is a different approval. Land
+      // it in the inbox instead of losing the post, and say so on the document.
+      if (mode !== "direct" || !isUnauditedForDirect(e)) throw e;
+      mode = "inbox";
+      publishId = await send(mode);
+    }
     await ref.update({
       status: "posted",
       dueAt: null,
       publishId,
       postedAt: Timestamp.now(),
-      mode: process.env.TIKTOK_POST_MODE === "direct" ? "direct" : "inbox",
+      mode,
+      downgraded: mode !== defaultMode(),
       error: FieldValue.delete(),
       ...options,
     });
@@ -108,12 +125,20 @@ export async function runScheduler(uid?: string): Promise<RunReport> {
   const db = adminDb();
   const report: RunReport = { published: [], failed: [], statsUpdated: 0 };
 
-  // Due posts: dueAt is only set while a post is scheduled, so a single-field
-  // range query is enough (no composite index to create).
-  let q = db.collection("posts").where("dueAt", "<=", Timestamp.now());
-  if (uid) q = q.where("uid", "==", uid);
-  const due = await q.limit(20).get();
-  for (const d of due.docs) {
+  // Due posts. Adding uid to the dueAt range turns this into a composite query,
+  // which Firestore refuses without a hand-built index — so when we're scoped to
+  // one user we fetch that user's posts on the single-field index and pick the
+  // due ones here. A user's own post count is small; the whole-fleet path keeps
+  // the range query, which needs no index either.
+  const due = uid
+    ? (await db.collection("posts").where("uid", "==", uid).get()).docs
+        .filter((d) => {
+          const at = d.data().dueAt as Timestamp | null | undefined;
+          return at ? at.toMillis() <= Date.now() : false;
+        })
+        .slice(0, 20)
+    : (await db.collection("posts").where("dueAt", "<=", Timestamp.now()).limit(20).get()).docs;
+  for (const d of due) {
     try {
       await publishPost(d.id);
       report.published.push(d.id);
@@ -149,11 +174,14 @@ export async function runScheduler(uid?: string): Promise<RunReport> {
   }
 
   // Feedback: resolve processing → public post ids, then refresh stats.
-  let pq = db.collection("posts").where("status", "==", "posted");
-  if (uid) pq = pq.where("uid", "==", uid);
-  const posted = await pq.limit(60).get();
-  const byUser = new Map<string, typeof posted.docs>();
-  for (const d of posted.docs) {
+  // Same story as the due query — status + uid together would need an index.
+  const postedDocs = uid
+    ? (await db.collection("posts").where("uid", "==", uid).get()).docs
+        .filter((d) => d.data().status === "posted")
+        .slice(0, 60)
+    : (await db.collection("posts").where("status", "==", "posted").limit(60).get()).docs;
+  const byUser = new Map<string, typeof postedDocs>();
+  for (const d of postedDocs) {
     const u = d.data().uid as string;
     byUser.set(u, [...(byUser.get(u) ?? []), d]);
   }

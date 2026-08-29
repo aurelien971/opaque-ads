@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { deleteField, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import ConsoleNav from "@/components/ConsoleNav";
 import Footer from "@/components/Footer";
-import PostComposer from "@/components/PostComposer";
 import PostEditor from "@/components/PostEditor";
 import AccountCard from "@/components/AccountCard";
 import DropZone from "@/components/DropZone";
@@ -46,7 +45,9 @@ export default function Dashboard() {
   const [connection, setConnection] = useState<TikTokConnection | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [uploading, setUploading] = useState<{ label: string; pct: number } | null>(null);
-  const [composing, setComposing] = useState<Post | null>(null);
+  // Freshly uploaded drafts, walked through one at a time.
+  const [review, setReview] = useState<string[]>([]);
+  const [reviewAt, setReviewAt] = useState(0);
   const [editing, setEditing] = useState<Post | null>(null);
   const [notice, setNotice] = useState("");
   const [running, setRunning] = useState(false);
@@ -83,6 +84,7 @@ export default function Dashboard() {
   const postedThisMonth = sent.filter((p) => p.status === "posted" && (p.postedAt?.toMillis() ?? 0) >= monthStart.getTime()).length;
   const avgViews = videos.length ? videos.reduce((a, v) => a + v.views, 0) / videos.length : 0;
   const slots = bestSlots(videos);
+  const reviewPost = review.length ? posts.find((p) => p.id === review[reviewAt]) ?? null : null;
 
   async function authed(path: string, body: unknown) {
     const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await user!.getIdToken()}` }, body: JSON.stringify(body) });
@@ -98,13 +100,14 @@ export default function Dashboard() {
   async function onVideoGroups(groups: FileGroup[]) {
     const list = groups.flatMap((g) => g.files).filter(isVideo);
     if (!list.length) { setNotice("No videos in that — MP4 or MOV."); return; }
+    const made: string[] = [];
     for (let i = 0; i < list.length; i++) {
       setUploading({ label: `Video ${i + 1} of ${list.length}`, pct: 0 });
-      try { await uploadPost(user!.uid, list[i], (pct) => setUploading({ label: `Video ${i + 1} of ${list.length}`, pct })); }
+      try { made.push(await uploadPost(user!.uid, list[i], (pct) => setUploading({ label: `Video ${i + 1} of ${list.length}`, pct }))); }
       catch (e) { setNotice(`Upload failed for ${list[i].name}: ${e instanceof Error ? e.message : "unknown error"}`); }
     }
     setUploading(null);
-    setNotice(`${list.length} video${list.length === 1 ? "" : "s"} added — ${list.length === 1 ? "one post" : `${list.length} separate posts`}.`);
+    startReview(made);
   }
 
   // Slideshows: one FOLDER, one carousel. Seven folders in, seven carousels out.
@@ -115,26 +118,40 @@ export default function Dashboard() {
       .filter((g) => g.files.length);
     if (!carousels.length) { setNotice("No images in that — JPG, PNG or WebP."); return; }
 
-    let made = 0;
+    const made: string[] = [];
     for (let i = 0; i < carousels.length; i++) {
       const c = carousels[i];
       const where = carousels.length > 1 ? `Carousel ${i + 1} of ${carousels.length}` : "Slideshow";
       try {
-        await uploadSlideshow(
+        made.push(await uploadSlideshow(
           user!.uid,
           c.files,
           (done, pct) => setUploading({ label: `${where} · slide ${done + 1} of ${c.files.length}`, pct }),
           c.name,
-        );
-        made++;
+        ));
       } catch (e) {
         setNotice(`${c.name || "Slideshow"} failed: ${e instanceof Error ? e.message : "unknown error"}`);
       }
     }
     setUploading(null);
-    if (made) {
-      const slides = carousels.reduce((a, c) => a + c.files.length, 0);
-      setNotice(`${made} carousel${made === 1 ? "" : "s"} added from ${slides} image${slides === 1 ? "" : "s"} — auto-music on. Click one to write its caption.`);
+    startReview(made);
+  }
+
+  // Straight from upload into a review run: preview, caption, hashtags, next.
+  function startReview(ids: string[]) {
+    if (!ids.length) return;
+    setReview(ids);
+    setReviewAt(0);
+    setNotice(`${ids.length} added. Write the captions — ${ids.length === 1 ? "it's" : "they're"} saved as you go.`);
+  }
+
+  async function postNow(postId: string) {
+    if (!connection) { setNotice("Connect TikTok first."); return; }
+    try {
+      await authed("/api/tiktok/publish", { postId });
+      setNotice("Posted. Check the Sent table below for delivery.");
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Publish failed.");
     }
   }
   async function smart() {
@@ -388,7 +405,7 @@ export default function Dashboard() {
                 {more && (
                   <div className="mt-4 space-y-4 border-t border-[rgba(22,21,15,0.08)] pt-4">
                     <div>
-                      <p className="mono-sm uppercase tracking-[0.15em]">Exact time</p>
+                      <p className="mono-sm uppercase tracking-[0.15em]">Or pick a time for every draft</p>
                       <div className="mt-2 flex gap-2">
                         <input type="datetime-local" value={exact} onChange={(e) => setExact(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-[rgba(22,21,15,0.14)] bg-ink px-2 py-1.5 text-[12px]" />
                         <button onClick={atExact} disabled={!drafts.length || !exact} className="pill-secondary px-3 text-[12px] font-medium disabled:opacity-40">Set</button>
@@ -414,7 +431,7 @@ export default function Dashboard() {
                         <button onClick={cadence} disabled={!drafts.length || !days.length} className="pill-secondary ml-auto px-3 py-1 font-medium disabled:opacity-40">Apply</button>
                       </div>
                     </div>
-                    <button onClick={runNow} disabled={running} className="pill-secondary w-full py-1.5 text-[12px] text-muted disabled:opacity-40">{running ? "Running…" : "Run scheduler now"}</button>
+                    <button onClick={runNow} disabled={running} className="pill-secondary w-full py-1.5 text-[12px] text-muted disabled:opacity-40">{running ? "Checking…" : "Send anything that’s due"}</button>
                   </div>
                 )}
               </div>
@@ -429,22 +446,26 @@ export default function Dashboard() {
       </main>
       <Footer />
 
-      {editing && (
+      {/* A review run walks the batch that was just uploaded; clicking a single
+          draft opens the same sheet with no step counter. One sheet, one place
+          to type a caption. */}
+      {reviewPost && (
         <PostEditor
-          post={posts.find((p) => p.id === editing.id) ?? editing}
-          onClose={() => setEditing(null)}
-          onPostNow={() => { if (!connection) { setNotice("Connect TikTok first."); return; } setComposing(editing); setEditing(null); }}
+          key={reviewPost.id}
+          post={reviewPost}
+          account={connection?.displayName}
+          step={{ index: reviewAt, total: review.length }}
+          onClose={() => setReview([])}
+          onNext={() => (reviewAt + 1 < review.length ? setReviewAt(reviewAt + 1) : setReview([]))}
+          onPostNow={postNow}
         />
       )}
-      {composing && connection && (
-        <PostComposer
-          creative={{ id: composing.id, caption: composing.caption }}
-          connection={connection}
-          onClose={() => setComposing(null)}
-          onPublish={async (opts) => {
-            try { await authed("/api/tiktok/publish", { postId: composing.id, ...opts }); return null; }
-            catch (e) { return e instanceof Error ? e.message : "Publish failed."; }
-          }}
+      {!reviewPost && editing && (
+        <PostEditor
+          post={posts.find((p) => p.id === editing.id) ?? editing}
+          account={connection?.displayName}
+          onClose={() => setEditing(null)}
+          onPostNow={postNow}
         />
       )}
     </>

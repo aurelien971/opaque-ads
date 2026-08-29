@@ -43,6 +43,12 @@ export const siteBase = () =>
 export const mediaUrl = (storagePath: string) =>
   `${siteBase()}/api/media/${storagePath.split("/").map(encodeURIComponent).join("/")}`;
 
+export type PostMode = "direct" | "inbox";
+
+/** What the environment asks for. A caller may still be forced back to inbox. */
+export const defaultMode = (): PostMode =>
+  process.env.TIKTOK_POST_MODE === "direct" ? "direct" : "inbox";
+
 const clientKey = () =>
   process.env.TIKTOK_CLIENT_KEY ?? process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY ?? "";
 const clientSecret = () => process.env.TIKTOK_CLIENT_SECRET ?? "";
@@ -90,10 +96,29 @@ async function tt<T = Record<string, unknown>>(
   const data = await res.json();
   const code = data.error?.code;
   if (!res.ok || (code && code !== "ok")) {
-    throw new Error(data.error?.message ?? `TikTok ${path} failed (${res.status})`);
+    // Carry the code, not just the prose. TikTok's messages are often the same
+    // generic "review our integration guidelines" line for wildly different
+    // causes; the code is the only part that tells you what to actually do.
+    throw new TikTokError(code ?? `http_${res.status}`, data.error?.message ?? `TikTok ${path} failed (${res.status})`);
   }
   return data.data as T;
 }
+
+export class TikTokError extends Error {
+  constructor(readonly code: string, message: string) {
+    super(`${message} [${code}]`);
+    this.name = "TikTokError";
+  }
+}
+
+/**
+ * True when TikTok is refusing because the app hasn't passed the Direct Post
+ * audit yet. An app can be "Live" and still not hold this — it's a separate
+ * approval — and until it lands, an unaudited client may only post to private
+ * accounts. The fix is to fall back to an inbox draft, not to fail the post.
+ */
+export const isUnauditedForDirect = (e: unknown) =>
+  e instanceof TikTokError && e.code === "unaudited_client_can_only_post_to_private_accounts";
 
 // What the account itself allows. TikTok requires this to be queried before a
 // DIRECT_POST and the answer respected: a private account cannot post publicly,
@@ -149,6 +174,7 @@ export async function publishVideo(
   token: string,
   videoUrl: string,
   opts: PostOptions,
+  mode: PostMode = defaultMode(),
 ): Promise<string> {
   const file = await fetch(videoUrl);
   if (!file.ok) throw new Error("Could not read the video file.");
@@ -156,7 +182,7 @@ export async function publishVideo(
   const size = bytes.byteLength;
   if (size > 64 * 1024 * 1024) throw new Error("Video over 64 MB — compress it first.");
 
-  const direct = process.env.TIKTOK_POST_MODE === "direct";
+  const direct = mode === "direct";
   const source_info = {
     source: "FILE_UPLOAD",
     video_size: size,
@@ -214,11 +240,12 @@ export async function publishPhotos(
   token: string,
   photoUrls: string[],
   opts: PostOptions,
+  mode: PostMode = defaultMode(),
 ): Promise<string> {
   if (!photoUrls.length) throw new Error("No slides to post.");
   if (photoUrls.length > 35) throw new Error("TikTok allows at most 35 slides.");
 
-  const direct = process.env.TIKTOK_POST_MODE === "direct";
+  const direct = mode === "direct";
   const [title, ...rest] = opts.caption.split("\n");
   const description = (rest.join("\n") || opts.caption).slice(0, 4000);
 

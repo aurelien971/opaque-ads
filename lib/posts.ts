@@ -86,7 +86,7 @@ export async function uploadPost(uid: string, file: File, onProgress: (pct: numb
     );
   });
   const videoUrl = await getDownloadURL(task.snapshot.ref);
-  await addDoc(collection(db, "posts"), {
+  const created = await addDoc(collection(db, "posts"), {
     uid,
     name: file.name.replace(/\.[^.]+$/, ""),
     caption: "",
@@ -97,6 +97,7 @@ export async function uploadPost(uid: string, file: File, onProgress: (pct: numb
     dueAt: null,
     createdAt: serverTimestamp(),
   });
+  return created.id;
 }
 
 /**
@@ -144,7 +145,7 @@ export async function uploadSlideshow(
     photoUrls.push(await getDownloadURL(task.snapshot.ref));
   }
 
-  await addDoc(collection(db, "posts"), {
+  const created = await addDoc(collection(db, "posts"), {
     uid,
     name: label ? `${label} · ${files.length} slides` : `Slideshow · ${files.length} slides`,
     caption: "",
@@ -160,6 +161,7 @@ export async function uploadSlideshow(
     dueAt: null,
     createdAt: serverTimestamp(),
   });
+  return created.id;
 }
 
 export const updatePost = (id: string, fields: Partial<Post>) =>

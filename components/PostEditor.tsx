@@ -14,12 +14,21 @@ const toLocalInput = (d: Date) => {
 
 export default function PostEditor({
   post,
+  account,
+  step,
   onClose,
+  onNext,
   onPostNow,
 }: {
   post: Post;
+  /** @handle of the connected account — TikTok requires it be shown at publish. */
+  account?: string;
+  /** Set while reviewing a freshly uploaded batch: "3 of 7". */
+  step?: { index: number; total: number };
   onClose: () => void;
-  onPostNow: () => void;
+  onNext?: () => void;
+  /** Publishes this post immediately with whatever is saved on it. */
+  onPostNow: (postId: string) => Promise<void>;
 }) {
   const [caption, setCaption] = useState(post.caption ?? "");
   const [hashtags, setHashtags] = useState(post.hashtags ?? "");
@@ -32,6 +41,7 @@ export default function PostEditor({
   const [brandedContent, setBrandedContent] = useState(post.brandedContent ?? false);
   const [when, setWhen] = useState(post.dueAt ? toLocalInput(post.dueAt.toDate()) : "");
   const [saved, setSaved] = useState<"idle" | "saving" | "saved">("idle");
+  const [posting, setPosting] = useState(false);
 
   useEffect(() => {
     if (brandedContent && privacy === "SELF_ONLY") setPrivacy("PUBLIC_TO_EVERYONE");
@@ -61,6 +71,21 @@ export default function PostEditor({
     setTimeout(() => setSaved("idle"), 1500);
   }
 
+  // Post now saves first, so what goes out is exactly what's on screen — no
+  // second sheet asking for the caption all over again.
+  async function postNow() {
+    setPosting(true);
+    try {
+      await save();
+      await onPostNow(post.id);
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  const isPhoto = post.mediaType === "PHOTO";
+  const lastStep = !step || step.index === step.total - 1;
+
   const cleanTags = hashtags
     .split(/[\s,]+/)
     .filter(Boolean)
@@ -77,7 +102,9 @@ export default function PostEditor({
         <div className="flex items-center justify-between border-b border-stroke px-6 py-4">
           <div>
             <p className="text-xs font-bold tracking-widest text-accent">
-              {isScheduled ? "SCHEDULED POST" : post.status === "draft" ? "DRAFT" : post.status.toUpperCase()}
+              {step
+                ? `REVIEW ${step.index + 1} OF ${step.total}`
+                : isScheduled ? "SCHEDULED POST" : post.status === "draft" ? "DRAFT" : post.status.toUpperCase()}
             </p>
             <h2 className="font-semibold">{post.name}</h2>
           </div>
@@ -171,28 +198,61 @@ export default function PostEditor({
                 onChange={(e) => setWhen(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stroke bg-ink px-3 py-2 text-sm outline-none focus:border-accent"
               />
-              <p className="mt-1 text-[11px] text-muted">Sound: add it inside TikTok when the draft arrives — the API can&apos;t attach sounds.</p>
+              <p className="mt-1 text-[11px] text-muted">
+                {isPhoto
+                  ? "Sound: TikTok picks one from its licensed library automatically."
+                  : "Sound: add it inside TikTok when the draft arrives — the API can’t attach sounds to video."}
+              </p>
+              <p className="mt-1 text-[11px] text-muted">Leave this empty and the post just waits as a draft until you schedule or post it.</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-auto flex flex-wrap items-center gap-3 border-t border-stroke px-6 py-4">
-          <button onClick={save} className="glass-bright rounded-full px-6 py-2.5 text-sm font-semibold">
-            {saved === "saving" ? "Saving…" : saved === "saved" ? "Saved ✓" : when ? "Save & schedule" : "Save"}
-          </button>
-          {post.status !== "posted" && (
-            <button onClick={onPostNow} className="rounded-full border border-stroke px-5 py-2.5 text-sm font-semibold hover:border-accent">
-              Post now…
+        <div className="mt-auto border-t border-stroke px-6 py-4">
+          {/* TikTok requires the destination account and the music confirmation
+              to be visible wherever a post can be sent. */}
+          <p className="mb-3 text-[11px] text-muted">
+            {account ? <>Posting to <span className="font-semibold text-fg">@{account}</span>. </> : null}
+            By posting you confirm this content complies with TikTok&apos;s{" "}
+            <a className="underline" href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noreferrer">
+              Music Usage Confirmation
+            </a>.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {post.status !== "posted" && (
+              <button
+                onClick={postNow}
+                disabled={posting}
+                className="glass-bright rounded-full px-6 py-2.5 text-sm font-semibold disabled:opacity-60"
+              >
+                {posting ? "Posting…" : "Post now"}
+              </button>
+            )}
+
+            <button
+              onClick={async () => {
+                await save();
+                onNext?.();
+              }}
+              className="rounded-full border border-stroke px-5 py-2.5 text-sm font-semibold hover:border-accent"
+            >
+              {saved === "saving"
+                ? "Saving…"
+                : step
+                  ? lastStep ? "Save & finish" : "Save & next →"
+                  : saved === "saved" ? "Saved ✓" : when ? "Save & schedule" : "Save"}
             </button>
-          )}
-          {isScheduled && (
-            <button onClick={async () => { await unschedule(post.id); onClose(); }} className="text-sm text-muted hover:text-fg">
-              Unschedule
+
+            {isScheduled && (
+              <button onClick={async () => { await unschedule(post.id); onClose(); }} className="text-sm text-muted hover:text-fg">
+                Unschedule
+              </button>
+            )}
+            <button onClick={async () => { await deletePost(post); onClose(); }} className="ml-auto text-sm text-muted hover:text-red-500">
+              Delete
             </button>
-          )}
-          <button onClick={async () => { await deletePost(post); onClose(); }} className="ml-auto text-sm text-muted hover:text-red-500">
-            Delete
-          </button>
+          </div>
         </div>
       </div>
     </div>
