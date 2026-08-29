@@ -7,9 +7,14 @@ export async function GET() {
     env: {
       FIREBASE_SERVICE_ACCOUNT_B64: !!process.env.FIREBASE_SERVICE_ACCOUNT_B64,
       FIREBASE_SERVICE_ACCOUNT: !!process.env.FIREBASE_SERVICE_ACCOUNT,
-      NEXT_PUBLIC_TIKTOK_CLIENT_KEY: !!process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY,
+      // The client key is public by design (it rides in the OAuth URL), so
+      // echoing it is safe — and it's the only way to see at a glance whether
+      // a deploy is on the production app or still on the sandbox one.
+      NEXT_PUBLIC_TIKTOK_CLIENT_KEY: process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY ?? "(unset)",
       TIKTOK_CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
       TIKTOK_POST_MODE: process.env.TIKTOK_POST_MODE ?? "(unset)",
+      // Slideshows are pulled from this domain, so it has to be the verified one.
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? "(unset → default)",
       CRON_SECRET: !!process.env.CRON_SECRET,
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "(unset → default)",
     },
