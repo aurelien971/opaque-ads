@@ -127,6 +127,7 @@ export const isUnauditedForDirect = (e: unknown) =>
 export type CreatorInfo = {
   creator_nickname: string;
   creator_username: string;
+  creator_avatar_url: string;
   privacy_level_options: string[];
   comment_disabled: boolean;
   duet_disabled: boolean;

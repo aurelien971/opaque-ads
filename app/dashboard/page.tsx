@@ -145,6 +145,9 @@ export default function Dashboard() {
     setNotice(`${ids.length} added. Write the captions — ${ids.length === 1 ? "it's" : "they're"} saved as you go.`);
   }
 
+  // The publish sheet shows fetched creator info, so it needs a way to ask.
+  const getCreator = () => authed("/api/tiktok/creator", {});
+
   async function postNow(postId: string) {
     if (!connection) { setNotice("Connect TikTok first."); return; }
     try {
@@ -458,6 +461,7 @@ export default function Dashboard() {
           onClose={() => setReview([])}
           onNext={() => (reviewAt + 1 < review.length ? setReviewAt(reviewAt + 1) : setReview([]))}
           onPostNow={postNow}
+          getCreator={getCreator}
         />
       )}
       {!reviewPost && editing && (
@@ -466,6 +470,7 @@ export default function Dashboard() {
           account={connection?.displayName}
           onClose={() => setEditing(null)}
           onPostNow={postNow}
+          getCreator={getCreator}
         />
       )}
     </>
