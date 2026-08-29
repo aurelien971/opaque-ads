@@ -115,8 +115,10 @@ export async function uploadSlideshow(
   uid: string,
   files: File[],
   onProgress: (done: number, pct: number) => void,
+  /** The folder it came from, if any — it names the draft. */
+  label?: string,
 ) {
-  if (files.length < 2) throw new Error("A slideshow needs at least 2 images.");
+  if (!files.length) throw new Error("A slideshow needs at least one image.");
   if (files.length > 35) throw new Error("TikTok allows at most 35 slides.");
 
   const stamp = Date.now();
@@ -144,7 +146,7 @@ export async function uploadSlideshow(
 
   await addDoc(collection(db, "posts"), {
     uid,
-    name: `Slideshow · ${files.length} slides`,
+    name: label ? `${label} · ${files.length} slides` : `Slideshow · ${files.length} slides`,
     caption: "",
     mediaType: "PHOTO",
     photoPaths,

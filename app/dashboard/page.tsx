@@ -2,13 +2,14 @@
 // The workspace. Three questions, answered top to bottom — what's going out,
 // what went out, how it did — with the account and the controls on the right.
 // Not connected yet? One focused panel, nothing else.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { deleteField, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import ConsoleNav from "@/components/ConsoleNav";
 import Footer from "@/components/Footer";
 import PostComposer from "@/components/PostComposer";
 import PostEditor from "@/components/PostEditor";
 import AccountCard from "@/components/AccountCard";
+import DropZone from "@/components/DropZone";
 import OrbitMark from "@/components/OrbitMark";
 import { bestSlots, describeSlots, fmtN } from "@/lib/analytics";
 import type { TikTokVideo } from "@/lib/tiktok-server";
@@ -16,6 +17,7 @@ import { db } from "@/lib/firebase";
 import { useRequireAuth } from "@/lib/auth";
 import { buildAuthUrl, tiktokClientKey, type TikTokConnection } from "@/lib/tiktok";
 import { autoSchedule, scheduleAt, smartSchedule, uploadPost, uploadSlideshow, watchPosts, type Post } from "@/lib/posts";
+import { isImage, isVideo, type FileGroup } from "@/lib/dropfiles";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 const PRIVACY_LABEL: Record<string, string> = { PUBLIC_TO_EVERYONE: "Public", MUTUAL_FOLLOW_FRIENDS: "Friends", FOLLOWER_OF_CREATOR: "Followers", SELF_ONLY: "Only me" };
@@ -43,16 +45,13 @@ export default function Dashboard() {
   const { user, loading } = useRequireAuth();
   const [connection, setConnection] = useState<TikTokConnection | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [uploading, setUploading] = useState<{ done: number; total: number; pct: number } | null>(null);
+  const [uploading, setUploading] = useState<{ label: string; pct: number } | null>(null);
   const [composing, setComposing] = useState<Post | null>(null);
   const [editing, setEditing] = useState<Post | null>(null);
   const [notice, setNotice] = useState("");
   const [running, setRunning] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const [videos, setVideos] = useState<TikTokVideo[]>([]);
   const [more, setMore] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
-  const slideInput = useRef<HTMLInputElement>(null);
 
   // Custom cadence
   const [days, setDays] = useState<number[]>([2, 4, 6]);
@@ -95,33 +94,48 @@ export default function Dashboard() {
     if (!tiktokClientKey()) { setNotice("TikTok keys aren't configured on the server yet."); return; }
     window.location.href = await buildAuthUrl();
   }
-  async function onUpload(files: FileList | null) {
-    if (!files?.length) return;
-    const list = Array.from(files).filter((f) => f.type.startsWith("video/"));
+  // Videos: one file, one post. Folders are just a way of carrying them in.
+  async function onVideoGroups(groups: FileGroup[]) {
+    const list = groups.flatMap((g) => g.files).filter(isVideo);
+    if (!list.length) { setNotice("No videos in that — MP4 or MOV."); return; }
     for (let i = 0; i < list.length; i++) {
-      setUploading({ done: i, total: list.length, pct: 0 });
-      try { await uploadPost(user!.uid, list[i], (pct) => setUploading({ done: i, total: list.length, pct })); }
+      setUploading({ label: `Video ${i + 1} of ${list.length}`, pct: 0 });
+      try { await uploadPost(user!.uid, list[i], (pct) => setUploading({ label: `Video ${i + 1} of ${list.length}`, pct })); }
       catch (e) { setNotice(`Upload failed for ${list[i].name}: ${e instanceof Error ? e.message : "unknown error"}`); }
     }
     setUploading(null);
+    setNotice(`${list.length} video${list.length === 1 ? "" : "s"} added — ${list.length === 1 ? "one post" : `${list.length} separate posts`}.`);
   }
-  // Every image dropped here becomes ONE slideshow post, in the order chosen —
-  // unlike videos, where each file is its own post.
-  async function onSlides(files: FileList | null) {
-    if (!files?.length) return;
-    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
-    if (list.length < 2) {
-      setNotice("Pick at least 2 images — a slideshow needs more than one slide.");
-      return;
-    }
-    setUploading({ done: 0, total: list.length, pct: 0 });
-    try {
-      await uploadSlideshow(user!.uid, list, (done, pct) => setUploading({ done, total: list.length, pct }));
-      setNotice(`Slideshow added — ${list.length} slides, with TikTok's auto-music on. Click it to write the caption.`);
-    } catch (e) {
-      setNotice(`Slideshow failed: ${e instanceof Error ? e.message : "unknown error"}`);
+
+  // Slideshows: one FOLDER, one carousel. Seven folders in, seven carousels out.
+  // Loose images dropped outside any folder make a single carousel between them.
+  async function onSlideGroups(groups: FileGroup[]) {
+    const carousels = groups
+      .map((g) => ({ ...g, files: g.files.filter(isImage) }))
+      .filter((g) => g.files.length);
+    if (!carousels.length) { setNotice("No images in that — JPG, PNG or WebP."); return; }
+
+    let made = 0;
+    for (let i = 0; i < carousels.length; i++) {
+      const c = carousels[i];
+      const where = carousels.length > 1 ? `Carousel ${i + 1} of ${carousels.length}` : "Slideshow";
+      try {
+        await uploadSlideshow(
+          user!.uid,
+          c.files,
+          (done, pct) => setUploading({ label: `${where} · slide ${done + 1} of ${c.files.length}`, pct }),
+          c.name,
+        );
+        made++;
+      } catch (e) {
+        setNotice(`${c.name || "Slideshow"} failed: ${e instanceof Error ? e.message : "unknown error"}`);
+      }
     }
     setUploading(null);
+    if (made) {
+      const slides = carousels.reduce((a, c) => a + c.files.length, 0);
+      setNotice(`${made} carousel${made === 1 ? "" : "s"} added from ${slides} image${slides === 1 ? "" : "s"} — auto-music on. Click one to write its caption.`);
+    }
   }
   async function smart() {
     const { slots: s, basis } = bestSlots(videos);
@@ -260,46 +274,40 @@ export default function Dashboard() {
               <section>
                 <div className="flex items-end justify-between">
                   <h2 className="serif text-[28px]">Drafts</h2>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => slideInput.current?.click()}
-                      disabled={!!uploading}
-                      className="rounded-full border border-[rgba(22,21,15,0.18)] px-3.5 py-1.5 text-[12.5px] font-medium transition hover:border-fg disabled:opacity-40"
-                    >
-                      + New slideshow
-                    </button>
-                    <span className="mono-sm">{drafts.length} waiting</span>
+                  <span className="mono-sm">{drafts.length} waiting</span>
+                </div>
+
+                {/* Two permanent drop zones. Both take folders; what a folder
+                    means is the only thing that differs between them. */}
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <DropZone
+                    title="Videos"
+                    hint="Drop videos or a folder of them. Each file becomes its own post."
+                    accept="video/mp4,video/quicktime"
+                    busy={uploading?.label ? `${uploading.label} · ${uploading.pct}%` : null}
+                    onGroups={onVideoGroups}
+                  />
+                  <DropZone
+                    title="Slideshows"
+                    hint="Drop folders — one folder is one carousel. Seven folders, seven carousels. Loose images make a single one."
+                    accept="image/jpeg,image/png,image/webp"
+                    directory
+                    busy={uploading?.label ? `${uploading.label} · ${uploading.pct}%` : null}
+                    onGroups={onSlideGroups}
+                  />
+                </div>
+
+                {drafts.length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+                    {drafts.map((p) => (
+                      <button key={p.id} onClick={() => setEditing(p)} className="group relative aspect-[9/14] overflow-hidden rounded-[12px] bg-[#16150F] text-left">
+                        <Thumb post={p} className="h-full w-full transition group-hover:opacity-80" />
+                        <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6 text-[11px] text-[#F4F1EA]">{p.caption || p.name}</span>
+                      </button>
+                    ))}
                   </div>
-                </div>
-                <input ref={fileInput} type="file" accept="video/mp4,video/quicktime" multiple hidden onChange={(e) => onUpload(e.target.files)} />
-                <input ref={slideInput} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { onSlides(e.target.files); e.target.value = ""; }} />
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={(e) => { e.preventDefault(); setDragging(false); onUpload(e.dataTransfer.files); }}
-                  className={`mt-4 grid grid-cols-3 gap-3 rounded-[20px] border border-dashed p-3 transition sm:grid-cols-4 md:grid-cols-5 ${dragging ? "border-accent bg-surface" : "border-[rgba(22,21,15,0.2)]"}`}
-                >
-                  <button onClick={() => fileInput.current?.click()} className="flex aspect-[9/14] flex-col items-center justify-center rounded-[12px] border border-[rgba(22,21,15,0.14)] text-center transition hover:border-fg">
-                    {uploading ? (
-                      <>
-                        <span className="font-mono text-[12px]">{uploading.pct}%</span>
-                        <span className="mono-sm mt-1">{uploading.done + 1} of {uploading.total}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-[22px] leading-none">+</span>
-                        <span className="mono-sm mt-2">{dragging ? "drop" : "add videos"}</span>
-                      </>
-                    )}
-                  </button>
-                  {drafts.map((p) => (
-                    <button key={p.id} onClick={() => setEditing(p)} className="group relative aspect-[9/14] overflow-hidden rounded-[12px] bg-[#16150F] text-left">
-                      <Thumb post={p} className="h-full w-full transition group-hover:opacity-80" />
-                      <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6 text-[11px] text-[#F4F1EA]">{p.caption || p.name}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-[12px] text-faint">Videos: MP4 or MOV, up to 64 MB each — one post per file. Slideshows: 2–35 images, all of them one post, with TikTok’s auto-music on. Click a draft to add its caption, hashtags and privacy.</p>
+                )}
+                <p className="mt-2 text-[12px] text-faint">MP4 or MOV up to 64 MB. Carousels take 1–35 images each and post with TikTok’s auto-music on. Click a draft to add its caption, hashtags and privacy.</p>
               </section>
 
               {/* Sent */}
